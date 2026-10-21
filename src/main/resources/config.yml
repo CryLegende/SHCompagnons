@@ -1,0 +1,287 @@
+# Configuration de la base de données
+# type peut être "SQLITE" ou "MYSQL"
+database:
+  type: "MYSQL" # ou MYSQL
+  mysql:
+    host: "127.0.0.1"
+    port: 3306
+    database: "Cosmetiques"
+    username: "utilisateur"
+    password: "CHANGE_ME"
+    useSSL: false
+    # Propriétés additionnelles pour HikariCP si besoin (décommentez et adaptez)
+    properties:
+      autoReconnect: true
+    #   cachePrepStmts: true
+    #   prepStmtCacheSize: 250
+    #   prepStmtCacheSqlLimit: 2048
+    #   useServerPrepStmts: true
+    #   useLocalSessionState: true
+    #   rewriteBatchedStatements: true
+    #   cacheResultSetMetadata: true
+    #   cacheServerConfiguration: true
+    #   elideSetAutoCommits: true
+    #   maintainTimeStats: false
+
+companion_settings:
+  armorstand_base_vertical_offset: 0.6
+  right_arm_pose_degrees:
+    x: -45
+    y: 45
+    z: 0
+  
+  # Nouvel ajout : Décalage du Yaw de l'ArmorStand par rapport au joueur (en degrés)
+  # 0.0 = L'ArmorStand regarde dans la même direction que le joueur.
+  # 90.0 = L'ArmorStand regarde à 90 degrés vers la DROITE du joueur.
+  # -90.0 = L'ArmorStand regarde à 90 degrés vers la GAUCHE du joueur.
+  # 180.0 = L'ArmorStand regarde dans la direction opposée au joueur (fait face au joueur).
+  armorstand_yaw_offset_degrees: 190.0 
+
+  follow_speed: 1
+  max_distance_before_teleport_squared: 225
+
+
+# ============================================================
+# Messages du Plugin
+# Vous pouvez utiliser des codes couleurs avec '&'.
+# Placeholders disponibles:
+#   {player} - Nom du joueur cible (dans les commandes admin)
+#   {pet_type_key} - La clé du type de pet (ex: ghast_buddy)
+#   {pet_display_name} - Le nom d'affichage du pet (ex: &fBulle &7Ghast)
+#   {admin_sender} - Nom de celui qui exécute la commande admin (ex: Console, Cry_Legende)
+#   {command_label} - L'alias de commande utilisé (ex: shc, compagnons)
+# ============================================================
+messages:
+  prefix: "&7&l« &6&lSH &8&l» " # Préfixe optionnel pour tous les messages (laisser vide si non désiré)
+
+  # Messages pour les joueurs (visibles par le joueur qui reçoit le pet, etc.)
+  # pet_equipped: "{prefix}&aVotre compagnon {pet_display_name}&a a été équipé !"
+  pet_equipped: ""
+  # pet_removed: "{prefix}&eVotre compagnon a été retiré."
+  pet_removed: ""
+  pet_save_error: "{prefix}&cErreur lors de la sauvegarde de votre compagnon."
+  pet_remove_db_error: "{prefix}&cErreur lors du retrait de votre compagnon de la base de données."
+  pet_type_no_longer_available_on_reload: "{prefix}&eVotre ancien type de compagnon n'est plus disponible et a été retiré."
+
+  # Messages pour les administrateurs (visibles par celui qui exécute les commandes)
+  admin_no_permission_command: "&8&l« &f&lSH &8&l» &fCommande inconnue, essayer autre chose."
+  admin_no_permission_subcommand: "&8&l« &f&lSH &8&l» &fCommande inconnue, essayer autre chose."
+  admin_usage_set: "{prefix}&cUsage: /{command_label} set <joueur> <type_pet>"
+  admin_usage_unset: "{prefix}&cUsage: /{command_label} unset <joueur>"
+  admin_player_not_online: "{prefix}&cLe joueur '{player}' n'est pas en ligne ou n'existe pas."
+  admin_pet_type_not_exists: "{prefix}&cLe type de compagnon '{pet_type_key}' n'existe pas."
+  admin_available_types_info: "&7Types disponibles: {types_list}" # Pas de préfixe pour mieux s'aligner
+  admin_pet_set_success: "{prefix}&aLe compagnon {pet_display_name}&a a été défini pour {player}."
+  admin_player_no_pet_to_unset: "{prefix}&e{player} n'a pas de compagnon actif ou enregistré à retirer."
+  admin_pet_unset_success: "{prefix}&aLe compagnon de {player} a été retiré (s'il en avait un)."
+  admin_reload_start: "{prefix}&eRechargement de la configuration de SHCompagnons..."
+  admin_reload_success: "{prefix}&aLa configuration de SHCompagnons a été rechargée !"
+  admin_unknown_command_no_help_permission: "{prefix}&cCommande inconnue. Vous n'avez pas non plus la permission pour voir l'aide."
+
+  # Messages d'aide (ne pas mettre de préfixe ici si vous voulez les garder propres)
+  help_header: "&b--- Aide SHCompagnons (v{plugin_version}) ---"
+  help_set: "&6/{command_label} set <joueur> <type_pet> &7- Définit un compagnon."
+  help_unset: "&6/{command_label} unset <joueur> &7- Retire le compagnon."
+  help_reload: "&6/{command_label} reload &7- Recharge la configuration."
+  help_footer: "&6/{command_label} help &7- Affiche ce message d'aide."
+
+
+
+# Configuration des pets
+# Vous pouvez ajouter autant de pets que vous voulez ici.
+# La clé (ex: ghast, creeper) sera utilisée dans la commande /shcompagnons set <joueur> <clé>
+pets:
+  ghast:
+    displayname: "Ghast"
+    animation: GLIDE
+    skins: 
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvN2E4YjcxNGQzMmQ3ZjZjZjhiMzdlMjIxYjc1OGI5YzU5OWZmNzY2NjdjN2NkNDViYmM0OWM1ZWYxOTg1ODY0NiJ9fX0="
+        skin_update_interval: 400
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzhmNzdlZWVlZjZmZmIyZjY4MThlNTc2OTg3OTRhZTAzNTFhYjMyYmEyMzRkNjIxYzIyZmU0Y2U4ZTE1OTlkMiJ9fX0="
+        skin_update_interval: 20
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjUyMTlhZTJlYTZlMjljZThhZTcwNGE0YjkxNGNjYWFhZjQwODZkYjNjZjU2NGRjYjU0YjliYmZiMWFlM2NlYSJ9fX0="
+        skin_update_interval: 5
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMjU4ZTgwNGUwZDg1MGUzZWJmMGEyMTkzOWFhNTY3YzM0MjFkMzc2YzBhOTE1MWNjMzFhZDZhZGYxMjdlNTQwMCJ9fX0="
+        skin_update_interval: 2
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZmRkMGI5ZGZiZTZjNmY5MzdmZTAyMmQxMzliNzI5MGI4NWFkZjgxNTBkOTliMTVhNTNkODE5MzJlZjEyNTBkZiJ9fX0="
+        skin_update_interval: 2
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzhmNzdlZWVlZjZmZmIyZjY4MThlNTc2OTg3OTRhZTAzNTFhYjMyYmEyMzRkNjIxYzIyZmU0Y2U4ZTE1OTlkMiJ9fX0="
+        skin_update_interval: 5
+  happy_ghast:
+    displayname: "Happy Ghast !"
+    animation: BOUNCING
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTUxMTEwNjcxYzQ0YjY0NmFjOTc2ZmYyMTRhZjQ4NDk5NGUyMTBmMmNhYzQ4MWZjMTk3YWIwZjAxMWU2MWFhOSJ9fX0="
+  Slime:
+    displayname: "Slime"
+    animation: BOUNCING
+    skins: 
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODk1YWVlYzZiODQyYWRhODY2OWY4NDZkNjViYzQ5NzYyNTk3ODI0YWI5NDRmMjJmNDViZjNiYmI5NDFhYmU2YyJ9fX0="
+        skin_update_interval: 800
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTMzMGFmMTdmODUxMmVkM2I0OWU3OGJjYTdlZjJkODNmMmRjMWU1OThhOGNiNTQyZWNjM2I2YmVjZWU5ZjU3In19fQ=="
+        skin_update_interval: 80
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTFhYzJlNTQ4NjFiZDkyYTAwNjA5NWQ0MTkyYThkODcyNDhmOTRiNzg5ZDZmMGZlZTI3NzBlNTNkYmNmNmQ1ZCJ9fX0="
+        skin_update_interval: 30
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTU3NjBlZTk3Yzg4YWU2Nzc3YTcyYTE4NWM3YTgxZjA4ZmZiOTdiNTRiYzQxZjhkMzhiNTExMmU1YzU0NTc0NSJ9fX0="
+        skin_update_interval: 35
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjk5ODEzY2Y3OGMxMDExNGE2YTRkNmM3YTJkOWFjNmU1ZjM5YTIxM2RjYzkyNThkNTBjYjhiYTJkNGIwZmQ5ZCJ9fX0="
+        skin_update_interval: 40
+  Slime_Bleu:
+    displayname: "Slime Bleu (Limule ?)"
+    animation: BOUNCING
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzI4NWNhYTJjM2NiOGExZWE4ZjJmN2UyZWNhZWU0NGFmYjIxYzYyMjExZGVhNmZkM2MxMzdiMjJiYjg2NzM0ZiJ9fX0="
+  Zombie:
+    displayname: "Zombie"
+    animation: BOUNCING
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMDZhZWE2YWNhMWE4MWIyM2JkOGM1ZTUwOGZlNzY2NDhmYzJlNDFmYWExYzhmYzI2Y2ZhOGJkY2U0MTYzIn19fQ=="
+  cochon:
+    displayname: "Cochon"
+    animation: BOUNCING
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWFmOGI1YWJkMjVjMjA5MmFjMDk2OTJiMTMyNWRmOWI2YzkwN2NkNWJkNTQ1ODdlOGFhM2E4MTUzY2ZlZCJ9fX0="
+  Abeille:
+    displayname: "Abeille"
+    animation: GLIDE_WOBBLE
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTlkYzNmMDBlY2FiMjI0OWJiNmExNmM4YzUxMTVjZWI5ZjIzMjA1YTBkNTVjYzBlOWJhYmQyNTYyZjc5NTljNCJ9fX0="
+  Manchot:
+    displayname: "Manchot"
+    animation: BOUNCING
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWVhNzU5Zjk3OWI5YjhlYTgzMWNhN2UyZDY2ZGYxNDgyOTNmMWE1MTQ3OTgzYjUyYzQ4ZWZlMmMzMTVlIn19fQ=="
+  Perroquet:
+    displayname: "Perroquet"
+    animation: BOUNCING
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzA3ZGFiMmNiZWJlYTUzOWI2NGQ1YWQyNDZmOWNjYzFmY2RhN2FhOTRiODhlNTlmYzI4Mjk4NTJmNDYwNzEifX19"
+  Poulet:
+    displayname: "Poulet"
+    animation: BOUNCING
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvN2YzN2Q1MjRjM2VlZDE3MWNlMTQ5ODg3ZWExZGVlNGVkMzk5OTA0NzI3ZDUyMTg2NTY4OGVjZTNiYWM3NWUifX19"
+  Obsidienne:
+    displayname: "Obsidienne"
+    animation: GLIDE
+    skins: 
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYWJhOTY0N2VjN2M4ZjM1OWQ4ZDA5NTJiZGJmNzJjYmI0YjU3NDNjZjg0NTVkY2I3NjY0ZTJiZjliZGY4YjcxOCJ9fX0="
+        skin_update_interval: 80
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmJjMDgxMWM0NWMzNmVmNDNiMDBhMmY5NzMyOGI5MGRkNDI3N2UwNTQ3NWZmNTkyMGJjM2JhNWRhOWY1ZmZmYyJ9fX0="
+        skin_update_interval: 3
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNmJlZTYwMGIzOWI3Nzg0MGY4YmYzMjQxMDA0NzY3M2NkOTgyZjNiZjM5Mzc5NDUyM2ZjODZmMzU0MWU0ZjA5ZCJ9fX0="
+        skin_update_interval: 3
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjM2ZGE1NGZlNDRhNDI5NzBlMTA5MmQzZGY3YzEzZTc5NWMxY2Q3MTEyYTEwNGQ5YmZiOGI3YjExYmZhN2MwZiJ9fX0"
+        skin_update_interval: 3
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNmQ4YmJmNDc4YzdiOTAwMmM3OTQ2ZWUzMjhhYjNlNDNkNWFiM2ZjZjBhNDE4ZjJkZDZiZWI5NWYzYjliYWE4NSJ9fX0="
+        skin_update_interval: 20
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjM2ZGE1NGZlNDRhNDI5NzBlMTA5MmQzZGY3YzEzZTc5NWMxY2Q3MTEyYTEwNGQ5YmZiOGI3YjExYmZhN2MwZiJ9fX0"
+        skin_update_interval: 3
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNmJlZTYwMGIzOWI3Nzg0MGY4YmYzMjQxMDA0NzY3M2NkOTgyZjNiZjM5Mzc5NDUyM2ZjODZmMzU0MWU0ZjA5ZCJ9fX0="
+        skin_update_interval: 3
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmJjMDgxMWM0NWMzNmVmNDNiMDBhMmY5NzMyOGI5MGRkNDI3N2UwNTQ3NWZmNTkyMGJjM2JhNWRhOWY1ZmZmYyJ9fX0="
+        skin_update_interval: 3
+  AmongUs:
+    displayname: "Among Us Rouge"
+    animation: NONE
+    skin_update_interval: 20
+    skins: 
+      - "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYjdjMTRlYjg3ZGM2NDQ0YWU2MjVmMTIyY2YzYWU5NmZjOGEyODZhYmI2OWRjYzc4ZWU5NWNkNDQzMjMyYTA1YyJ9fX0="
+      - "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDZjODU1MGE3ODE2NmRhMWQ1YmIxNmJjZmQ2OTI2NTk3NWM5ZTk0NDg5YzU1MzI2NGI0Y2Y1ZWNjODE3MjcxMyJ9fX0="
+      - "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMWRlMzJjNzY0ZjNmMjhkMjcyOWIxNjFlZTM1MGZhMDQzZWI3ZDI5MjExMzIzYWVmMzRjMzZjOTM4ZDEwOGExMCJ9fX0="
+      - "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTcwMWFiZjQ0YWRhN2YyOWRiYTliYzkzMDE2MzBiYjIzNWRjZWFmMGYwZGVmYTVhMzc4YmRjYjBiMDFkYjU4YSJ9fX0="
+      - "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzgxMjUyMTc3MWE3Y2I4NDFhNWZmYTIzNzU2NjEwM2MyZjllNGRjMzQ0NTJlNzY2MTgyOWQwYjA5MjEyZTNmNCJ9fX0="
+  Steve:
+    displayname: "Steve"
+    animation: BOUNCING
+    skins: 
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzMwZmVhNDQzNDlmMDczZjNmOTNjZTg2ZWM5ZWVlODJmODRhMWM1ZTI5NjdlYjFjMTliN2MzNWY5YTVlNWY5OSJ9fX0="
+        skin_update_interval: 60
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzY2YWFlNTNjZjI5ZjYxZDUwM2MxM2MwZjk1Yzk3YTA1MWFiNGNjZDA0ZGY1NzQ4NmY4MDRjNGY2MzdlOTkyOCJ9fX0"
+        skin_update_interval: 5
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvY2U3YWEzMDU2ZmJhN2FlZTE3NDIwM2M0MmUyOWRkN2YwM2NlZGQ1YTI0MzVlMWU3MzJiNDU1YzZmMTBhMWFjOSJ9fX0="
+        skin_update_interval: 60
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzY2YWFlNTNjZjI5ZjYxZDUwM2MxM2MwZjk1Yzk3YTA1MWFiNGNjZDA0ZGY1NzQ4NmY4MDRjNGY2MzdlOTkyOCJ9fX0"
+        skin_update_interval: 5
+  Alex:
+    displayname: "Alex"
+    animation: BOUNCING
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzFjZDI3NjJhY2I0YjQyNzhjZjExMTc2YTVmODc3OTlmOTNhMWQ5MTE2Y2IzY2I1N2VlNGQxZTYwMTM0NTg4In19fQ=="
+  Villageois:
+    displayname: "Villageois"
+    animation: BOUNCING
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTJlNDBiYzFmMzQ4YWM3YWQ0YmViMjhiYWVkZjdkYjgxNjczMDViNGQ4ZjEyOWNiZjdhNDZlMzJkMGRiZWM4ZSJ9fX0="
+  R2-D2:
+    displayname: "R2-D2"
+    animation: NONE
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTdhMGU1YmZlMzJmMTYxOWM2ODkxNTk0ZmI5YzNiMjc0YzM4ZTQ3Y2QwMWI3YWFmYzVjNGVlYmUzZjI5ODJhNCJ9fX0="
+  Bebe_Yoda:
+    displayname: "Bébé Yoda"
+    animation: BOUNCING
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTljYjM3Mjk0ZTA2OGE4MjY4NDM3ZDI0ZmJkNGVlNGQ3YTBkZGQ4Y2Y5YzM4ZDE2NmU4NTYxMGFmZWYzMTI0In19fQ=="
+  Nounours:
+    displayname: "Nounours"
+    animation: BOUNCING
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTQ5YzcyYWIwNzUxODU5YWI5MjM2YjFlOTRkNDE1YmUzZGVhZjgwOGE0MWQ1OTY5YzRmYWJiNzhjYWY0In19fQ=="
+  Slime_Dore:
+    displayname: "Slime Doré"
+    animation: BOUNCING
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjllM2Q2Y2VhYmNlNzI5ZWU3MjJjODA4MjQ2N2VkNTc0NzBlYjM4NDM2MTU3ZDVkZTA3YWZhMzQ5MWExNGQ1ZSJ9fX0="
+  Panda:
+    displayname: "Panda"
+    animation: GLIDE
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjk0ZjIxZmU4MzM5ODEzNWM5ZDA0ZGViODRhNjAwNGVkMDFmOTgxMjAzY2I2NDQzYWU1NzBjMTU5OTRiOTQ3ZSJ9fX0="
+  Sculk:
+    displayname: "Sculk"
+    animation: GLIDE
+    skins: 
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDE0YWRkMzc4NGY1NjZkNGIyNWIwZDk5ODMwOTAzOGE2MWJhY2RmYzYzYTlkOWM1MzUyM2Y2ZmEwOTFmMmMwMyJ9fX0="
+        skin_update_interval: 120
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODE3MjY5N2FmMjk0ZjlmNWM0ZTU5YTliMmY1MzA2ZDM0MDA5ZTZjZGZlZGVjYzU5NmMxMmI0NDRkNjlmMWY0NiJ9fX0="
+        skin_update_interval: 2
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvN2U5MDRkMDNjNTg4ZmFiZDdjOWQ0MjcwODk1MGRmYzY2MDEzMjkzZWIwZDY4NTczY2QyYTMyNTIwMzcyMzQ2YSJ9fX0K"
+        skin_update_interval: 3
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODE3MjY5N2FmMjk0ZjlmNWM0ZTU5YTliMmY1MzA2ZDM0MDA5ZTZjZGZlZGVjYzU5NmMxMmI0NDRkNjlmMWY0NiJ9fX0="
+        skin_update_interval: 2
+  Tortue:
+    displayname: "Tortue"
+    animation: GLIDE
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWFlOTAzNzEzN2I2Mjg4NDJhMjkzODBmODI4YzI2ZWM2NjE4NjY0YzM4MDJjOTk0NWY0YzAxYTk0M2FhNDBlOSJ9fX0="
+  Slime_Choco:
+    displayname: "Slime en Chocolat"
+    animation: GLIDE
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTJkMTYyMDMwMGE4ZTFlMGJkYTcwYzcxZWZiYzQ2Yjc4NDVkNjE3MTU4NGQ4MDBmYTkwMDRjZmFkODhkMmFhOCJ9fX0="
+  Jeb:
+    displayname: "Jeb le mouton"
+    animation: NONE
+    skin_update_interval: 20
+    skins: 
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzQ0NTQ0MTUxYmEzOWQ1YzVhYzk2OTVmOTVmNTE1YzljNGZmYWZjOGNmYjU0OTJjNDgyNWU0ZDdlZmQ5In19fQ=="
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTFmZDgwNmM1YjU5NzkzOWI0YjY1ODUzZWIwMzFhZGU2OGM5NjMzYzZjYzU3ZDJkMGQ0N2NmNTQxODhlODMwIn19fQ=="
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvN2QzNGZkMDhhYTMzYjE4MThjM2YxNjU5YTAyYmM3ZGE1Y2EwYTIxYWEwMTI0NjQ5MzhkOTU5ODZjMWY0In19fQ=="
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMWRlZTcyNTI5OTQ0Njk4NjhiNDBhMGI3NGQ0YTIzMzhlMmQxZTlmNDEyNDE3NzRmMjA2MTJiODE2NGNhY2Y5OSJ9fX0="
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODA5ODc1MzEzNGNjZDIyYjJkNTUzYmFhNTllMTJlOTkzNDNmNzE4Njg0NjIyYmI1ZGRjOTM1ZjU3ZDYzZiJ9fX0="
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjk3MTllYzllZTZmNTNjMTdiMWY2Zjc0Nzg2NmIzMTIxNDAxZDM1Zjc3YTM5ODU5ZjEyMmQ0NzI4NjNlNDhlIn19fQ=="
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNmYzZDRkYjQxY2ZhYzdlZjNkYWY1YTI1ZTJmODFiMTdhZmUzYjU2N2RkOWFmMTZkZjUzZjJhYzNmYmNiMSJ9fX0="
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGM3ZjliNDIyNGI3ZmE0ZTRhNDQ5ODFlNDYyZjM0NTc5OWEzNWEzM2Y4YWQ0MDkzYTFhMWZjNGE5ODY3MzUifX19"
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODdjZWQ4MzdkMDI5NDRlYzZiZjdlYzcxYjhmZmUxMzIwZjAyYmZiZTM0YThmZGFkYWRhY2YyNTBkNTU1MjIifX19"
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZGU5NjJiZjA3YjZhNGM1NWI5OWVkZGU3MWQxMDc5ZDc0NDRkM2ZjODkxZDQzY2Q0YzI3ZmE3ZGIzNGQwYmM5NSJ9fX0="
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNmZmY2RiYTZhMjI5ZTQzNGEwNDA4NDQ2YTlmNWM0Nzc0YjhhYjE1YmVhMWVmZDMzMWE5ODIzMzIxYjUifX19"
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWYzMDU1MWFkOWE2NDE0YTIwZTliZWNkNDM1NjI4NTRiNjIyNTRkOTQwYTJkNjFmNDdjNGYxZGQ4OTIifX19"
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzBkMzkwMTE2OWYzZmViMTVkNTEzMTBmZTMxZThjOGY4MTk5ZDZkNThkYzUzMTMzMzk4Yjk4YmY3MWVmODU2In19fQ=="
+  Cookie:
+    displayname: "Cookie"
+    animation: GLIDE
+    skins: 
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjAxNzY3OTFiNzFhYmYxZWUxY2QxY2I5YzU0MWIwMzE1MTM2OTRlYTcxYTRlMmUyYWY4MWEyYjZiNjY3MjUzYSJ9fX0="
+        skin_update_interval: 120
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNDg0MzYxYzk1YzAwNTU4ZDcyYTdmYjVkZTFlNTYzMTk2ZjNmM2I0YmZlMDcyZDgwYTA4MzUxMzdmNGU0ZTU0NSJ9fX0="
+        skin_update_interval: 2
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMmRmMjZlM2RiNzI0ZDJlNzU2MWRhOTAyODkyYWRlMTE3MGUwOWQyN2E1YTllZDUzYTFkODU1M2ZiMDM5OWY3NCJ9fX0="
+        skin_update_interval: 3
+      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNDg0MzYxYzk1YzAwNTU4ZDcyYTdmYjVkZTFlNTYzMTk2ZjNmM2I0YmZlMDcyZDgwYTA4MzUxMzdmNGU0ZTU0NSJ9fX0="
+        skin_update_interval: 2
+  Bonhomme_de_Neige:
+    displayname: "Bonhomme de Neige"
+    animation: GLIDE
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTBkNmFmMTVhMGYzYzMwZDdlNzFjMTk0MWMzMzc0MzBmYzA5NTQzN2E2NjI0NTA5ZDk2NTY5N2FlYjI2ZmEwOCJ9fX0="
+  Pere_Noel:
+    displayname: "Père Noël"
+    animation: BOUNCING
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTA5YWVkZWI5NTY4MmZkNmIxOGJkYzU5ZGY4NDE0YzM5MTdmNjQ1YWNiNDAxOTg2NTMwY2M0NzA1MjFiYjQyYyJ9fX0="
+  Lapin:
+    displayname: "Lapin"
+    animation: BOUNCING
+    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTU5MGJlNjc3N2MwZGU3Y2I4OWFiYmM0ZTE1NTdiOTVlMWJmOWVmYWM5YjQ0ZTlkNTM4YmYzNGNkNzU0ZTg0In19fQ=="
