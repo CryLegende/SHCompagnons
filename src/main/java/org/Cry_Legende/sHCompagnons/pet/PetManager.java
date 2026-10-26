@@ -63,10 +63,7 @@ public class PetManager {
                     PetConfig config = plugin.getConfigManager().getPetConfig(petType);
                     if (config != null) {
                         if (player.isOnline() && player.isValid()) {
-                            removeActivePet(player.getUniqueId());
-                            Pet pet = new Pet(plugin, player, config);
-                            activePets.put(player.getUniqueId(), pet);
-                            pet.spawn();
+                            spawnSilently(player, config);
                             plugin.getLogger().info("Compagnon " + petType + " chargé pour " + player.getName() + " (DB).");
                         }
                     } else {
@@ -79,6 +76,14 @@ public class PetManager {
                 plugin.getLogger().log(Level.SEVERE, "Erreur DB (loadPetForPlayer) pour " + player.getName(), ex);
                 return null;
             });
+    }
+
+    /** Recrée le compagnon déjà enregistré en base : ni écriture en base, ni message au joueur. */
+    private void spawnSilently(@NotNull Player player, @NotNull PetConfig config) {
+        removeActivePet(player.getUniqueId());
+        Pet pet = new Pet(plugin, player, config);
+        activePets.put(player.getUniqueId(), pet);
+        pet.spawn();
     }
 
     public void removeActivePet(@NotNull UUID playerUUID) {
@@ -171,6 +176,13 @@ public class PetManager {
                     return;
                 }
 
+                // Joueur parti pendant la lecture : rien à recréer (son compagnon a été retiré au départ).
+                if (!player.isOnline() || !player.isValid()) {
+                    return;
+                }
+
+                // Le type vient de la base : on recrée le compagnon sans setPet, qui le réécrivait en base et
+                // renvoyait « compagnon équipé » à chaque joueur à chaque reload.
                 if (existingPet != null) {
                     PetConfig newConfigFromPetType = null;
                     if (petTypeFromDb != null) {
@@ -178,8 +190,7 @@ public class PetManager {
                     }
                     if (newConfigFromPetType != null) {
                         plugin.getLogger().info("Re-création du pet pour " + player.getName() + " (type: " + newConfigFromPetType.getTypeKey() + ") après reload.");
-                        removeActivePet(playerId);
-                        setPet(player, newConfigFromPetType.getTypeKey());
+                        spawnSilently(player, newConfigFromPetType);
                     } else {
                         removeActivePet(playerId);
                         if (petTypeFromDb != null) {
@@ -193,10 +204,8 @@ public class PetManager {
                 } else if (petTypeFromDb != null) {
                     PetConfig configToLoad = plugin.getConfigManager().getPetConfig(petTypeFromDb);
                     if (configToLoad != null) {
-                        if (player.isOnline() && player.isValid()) {
-                            setPet(player, petTypeFromDb);
-                            plugin.getLogger().info("Compagnon " + petTypeFromDb + " chargé pour " + player.getName() + " (depuis DB après reload).");
-                        }
+                        spawnSilently(player, configToLoad);
+                        plugin.getLogger().info("Compagnon " + petTypeFromDb + " chargé pour " + player.getName() + " (depuis DB après reload).");
                     } else {
                         plugin.getDatabaseManager().removePlayerPet(playerId);
                         plugin.getLogger().info("Type " + petTypeFromDb + " (DB) pour " + player.getName() + " non trouvé en config après reload. DB nettoyée.");

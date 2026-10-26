@@ -42,6 +42,8 @@ public class Pet {
     private static volatile Class<?> positionValuesClass;
     private static volatile Constructor<?> positionVecConstructor;
     private static volatile Constructor<?> positionValuesConstructor;
+    // Le déplacement relatif a-t-il encore ses champs short (absents en 26.x) ? null tant que non vérifié
+    private static volatile Boolean relativeMoveHasShorts;
 
     private final SHCompagnons plugin;
     private final Player owner;
@@ -149,59 +151,21 @@ public class Pet {
         return observer.canSee(owner);
     }
 
+    // Les viewers sont recalculés à chaque tick (monde, distance, visibilité) par updateViewersForNearbyPlayers :
+    // les paquets de mouvement et d'équipement leur sont envoyés directement, sans reparcourir tous les joueurs
+    // du serveur ni recalculer les distances pour chaque paquet. Les destructions passent par despawnFor*.
     private void sendPacketToRelevantViewers(PacketContainer packet) {
-        if (!owner.isOnline() || currentLocation == null || currentLocation.getWorld() == null) return;
-        if (!this.logicallyVisible && packet.getType() != PacketType.Play.Server.ENTITY_DESTROY) {
-            return;
-        }
-        World petWorld = currentLocation.getWorld();
-        for (Player recipient : Bukkit.getOnlinePlayers()) {
-            if (!recipient.getWorld().equals(petWorld) ||
-                recipient.getLocation().distanceSquared(owner.getLocation()) > PET_VIEW_DISTANCE_SQUARED) {
-                continue;
-            }
-
-            boolean sendToThisRecipient = false;
-            if (packet.getType() == PacketType.Play.Server.ENTITY_DESTROY) {
-                if (viewers.contains(recipient.getUniqueId()) || recipient.getUniqueId().equals(owner.getUniqueId())) {
-                    sendToThisRecipient = true;
-                }
-            } else if (shouldObserverSeePet(recipient)) {
-                sendToThisRecipient = true;
-            }
-
-            if (sendToThisRecipient) {
-                try {
-                    plugin.getProtocolManager().sendServerPacket(recipient, packet);
-                } catch (Exception e) { /*ignore*/ }
-            }
-        }
+        sendPacketsToRelevantViewers(List.of(packet));
     }
 
     private void sendPacketsToRelevantViewers(List<PacketContainer> packets) {
         if (!owner.isOnline() || currentLocation == null || currentLocation.getWorld() == null) return;
-        boolean containsDestroy = packets.stream().anyMatch(p -> p.getType() == PacketType.Play.Server.ENTITY_DESTROY);
-        if (!this.logicallyVisible && !containsDestroy) {
+        if (!this.logicallyVisible || viewers.isEmpty()) {
             return;
         }
-
-        World petWorld = currentLocation.getWorld();
-        for (Player recipient : Bukkit.getOnlinePlayers()) {
-            if (!recipient.getWorld().equals(petWorld) ||
-                recipient.getLocation().distanceSquared(owner.getLocation()) > PET_VIEW_DISTANCE_SQUARED) {
-                continue;
-            }
-
-            boolean sendToThisRecipient = false;
-            if (containsDestroy) {
-                if (viewers.contains(recipient.getUniqueId()) || recipient.getUniqueId().equals(owner.getUniqueId())) {
-                    sendToThisRecipient = true;
-                }
-            } else if (shouldObserverSeePet(recipient)) {
-                sendToThisRecipient = true;
-            }
-
-            if (sendToThisRecipient) {
+        for (UUID viewerId : viewers) {
+            Player recipient = Bukkit.getPlayer(viewerId);
+            if (recipient != null) {
                 sendPacketsUnchecked(recipient, packets);
             }
         }
@@ -232,7 +196,15 @@ public class Pet {
         spawnPacket.getUUIDs().write(0, entityUUID);
         spawnPacket.getEntityTypeModifier().write(0, EntityType.ARMOR_STAND);
         spawnPacket.getDoubles().write(0, currentLocation.getX()).write(1, currentLocation.getY()).write(2, currentLocation.getZ());
-        spawnPacket.getBytes().write(0, (byte) (currentLocation.getYaw() * 256.0F / 360.0F)).write(1, (byte) (currentLocation.getPitch() * 256.0F / 360.0F));
+        // Ordre des champs du paquet d'apparition : xRot (tangage), yRot (lacet), yHeadRot. Le lacet écrit en premier
+        // tombait dans le tangage : le compagnon apparaissait tourné vers le sud tant que son maître ne bougeait pas.
+        byte yawByte = (byte) (currentLocation.getYaw() * 256.0F / 360.0F);
+        spawnPacket.getBytes()
+            .write(0, (byte) (currentLocation.getPitch() * 256.0F / 360.0F))
+            .write(1, yawByte);
+        if (spawnPacket.getBytes().size() > 2) {
+            spawnPacket.getBytes().write(2, yawByte);
+        }
         List<WrappedDataValue> metadata = createMetadataValuesList();
         PacketContainer metadataPacket = plugin.getProtocolManager().createPacket(PacketType.Play.Server.ENTITY_METADATA);
         metadataPacket.getIntegers().write(0, entityId);
@@ -388,21 +360,27 @@ public class Pet {
         if (currentLocation == null || currentLocation.getWorld() == null || !currentLocation.getWorld().equals(ownerWorld)) {
             if (isTransitioningWorld) return;
             plugin.getLogger().warning("[Pet " + entityId + "] UpdateViewers: currentLocation désynchro. Tentative de réalignement sur le monde du owner: " + ownerWorld.getName());
+            // Réalignement réel : sans lui, l'avertissement se répétait à chaque tick et le compagnon restait bloqué.
+            prepareForWorldChange();
+            respawn();
             return;
         }
 
+        // Joueurs du monde du maître seulement, position du maître lue une fois (appelé à chaque tick par compagnon).
+        Location ownerLocation = owner.getLocation();
         List<Player> playersInVicinity = new ArrayList<>();
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            if (p.getWorld().equals(ownerWorld) &&
-                p.getLocation().distanceSquared(owner.getLocation()) <= PET_VIEW_DISTANCE_SQUARED) {
+        Set<UUID> vicinityIds = new HashSet<>();
+        for (Player p : ownerWorld.getPlayers()) {
+            if (p.getLocation().distanceSquared(ownerLocation) <= PET_VIEW_DISTANCE_SQUARED) {
                 playersInVicinity.add(p);
+                vicinityIds.add(p.getUniqueId());
             }
         }
         Iterator<UUID> viewerIterator = viewers.iterator();
         while (viewerIterator.hasNext()) {
             UUID viewerId = viewerIterator.next();
             Player viewer = Bukkit.getPlayer(viewerId);
-            if (viewer == null || !viewer.isOnline() || !playersInVicinity.contains(viewer) || !shouldObserverSeePet(viewer)) {
+            if (viewer == null || !viewer.isOnline() || !vicinityIds.contains(viewerId) || !shouldObserverSeePet(viewer)) {
                 viewerIterator.remove();
                 if (viewer != null && viewer.isOnline()) {
                     PacketContainer destroyPacket = plugin.getProtocolManager().createPacket(PacketType.Play.Server.ENTITY_DESTROY);
@@ -554,12 +532,18 @@ public class Pet {
 
     private void move(@NotNull Location newActualLocation, short dx, short dy, short dz) {
         if (!owner.isOnline() || viewers.isEmpty()) return;
+        Boolean shorts = relativeMoveHasShorts;
+        if (shorts != null && !shorts) {
+            sendAbsoluteMove(newActualLocation);
+            return;
+        }
         PacketContainer relMoveLook = plugin.getProtocolManager().createPacket(PacketType.Play.Server.REL_ENTITY_MOVE_LOOK);
-        if (relMoveLook.getShorts().size() < 3) {
-            // Minecraft 26.x : le paquet de déplacement relatif ne porte plus de champs short,
-            // on envoie la position absolue à la place
-            PacketContainer absolute = createTeleportPacket(newActualLocation);
-            sendPacketsToRelevantViewers(List.of(absolute, createHeadRotationPacket(newActualLocation.getYaw())));
+        if (shorts == null) {
+            // Structure du paquet constante pour une version du serveur : vérifiée une seule fois
+            relativeMoveHasShorts = shorts = relMoveLook.getShorts().size() >= 3;
+        }
+        if (!shorts) {
+            sendAbsoluteMove(newActualLocation);
             return;
         }
         relMoveLook.getIntegers().write(0, entityId);
@@ -572,6 +556,12 @@ public class Pet {
         PacketContainer headRotationPacket = createHeadRotationPacket(newActualLocation.getYaw());
 
         sendPacketsToRelevantViewers(List.of(relMoveLook, headRotationPacket));
+    }
+
+    /** Minecraft 26.x : le paquet de déplacement relatif ne porte plus de champs short, on envoie la position absolue. */
+    private void sendAbsoluteMove(@NotNull Location newActualLocation) {
+        PacketContainer absolute = createTeleportPacket(newActualLocation);
+        sendPacketsToRelevantViewers(List.of(absolute, createHeadRotationPacket(newActualLocation.getYaw())));
     }
 
 

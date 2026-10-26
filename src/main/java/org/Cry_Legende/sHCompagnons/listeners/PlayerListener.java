@@ -49,7 +49,8 @@ public class PlayerListener implements Listener {
         handlePlayerLeave(event.getPlayer());
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    // Expulsion annulée par un autre plugin : le joueur reste, son compagnon aussi.
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerKick(PlayerKickEvent event) {
         handlePlayerLeave(event.getPlayer());
     }
