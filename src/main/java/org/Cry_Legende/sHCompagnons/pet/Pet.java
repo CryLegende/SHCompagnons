@@ -2,6 +2,8 @@ package org.Cry_Legende.sHCompagnons.pet;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.reflect.StructureModifier;
+import com.comphenix.protocol.utility.MinecraftReflection;
 import com.comphenix.protocol.wrappers.*;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher.Registry;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher.Serializer;
@@ -26,6 +28,7 @@ import org.jetbrains.annotations.Nullable;
 
 import com.comphenix.protocol.wrappers.Vector3F;
 
+import java.lang.reflect.Constructor;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -34,6 +37,11 @@ import java.util.logging.Level;
 public class Pet {
 
     private static final AtomicInteger lastEntityId = new AtomicInteger(Integer.MAX_VALUE - 20000);
+
+    // Classes et constructeurs de PositionMoveRotation (paquet de téléportation 1.21.2+), résolus une seule fois
+    private static volatile Class<?> positionValuesClass;
+    private static volatile Constructor<?> positionVecConstructor;
+    private static volatile Constructor<?> positionValuesConstructor;
 
     private final SHCompagnons plugin;
     private final Player owner;
@@ -547,6 +555,13 @@ public class Pet {
     private void move(@NotNull Location newActualLocation, short dx, short dy, short dz) {
         if (!owner.isOnline() || viewers.isEmpty()) return;
         PacketContainer relMoveLook = plugin.getProtocolManager().createPacket(PacketType.Play.Server.REL_ENTITY_MOVE_LOOK);
+        if (relMoveLook.getShorts().size() < 3) {
+            // Minecraft 26.x : le paquet de déplacement relatif ne porte plus de champs short,
+            // on envoie la position absolue à la place
+            PacketContainer absolute = createTeleportPacket(newActualLocation);
+            sendPacketsToRelevantViewers(List.of(absolute, createHeadRotationPacket(newActualLocation.getYaw())));
+            return;
+        }
         relMoveLook.getIntegers().write(0, entityId);
         relMoveLook.getShorts().write(0, dx).write(1, dy).write(2, dz);
         relMoveLook.getBytes()
@@ -563,6 +578,14 @@ public class Pet {
     private void sendLookPacket(float yaw, float pitch) {
         if (!owner.isOnline() || viewers.isEmpty()) return;
         PacketContainer lookPacket = plugin.getProtocolManager().createPacket(PacketType.Play.Server.ENTITY_LOOK);
+        if (lookPacket.getBytes().size() < 2 && currentLocation != null) {
+            // Minecraft 26.x : plus de champs byte dans le paquet de rotation, on renvoie la position absolue
+            Location rotated = currentLocation.clone();
+            rotated.setYaw(yaw);
+            rotated.setPitch(pitch);
+            sendPacketToRelevantViewers(createTeleportPacket(rotated));
+            return;
+        }
         lookPacket.getIntegers().write(0, entityId);
         lookPacket.getBytes()
             .write(0, (byte) (yaw * 256.0F / 360.0F))
@@ -592,19 +615,55 @@ public class Pet {
             return;
         }
 
-        PacketContainer teleportPacket = plugin.getProtocolManager().createPacket(PacketType.Play.Server.ENTITY_TELEPORT);
-        teleportPacket.getIntegers().write(0, entityId);
-        teleportPacket.getDoubles()
-            .write(0, this.currentLocation.getX())
-            .write(1, this.currentLocation.getY())
-            .write(2, this.currentLocation.getZ());
-        teleportPacket.getBytes()
-            .write(0, (byte) (this.currentLocation.getYaw() * 256.0F / 360.0F))
-            .write(1, (byte) (this.currentLocation.getPitch() * 256.0F / 360.0F));
-        teleportPacket.getBooleans().write(0, owner.isOnGround());
+        PacketContainer teleportPacket = createTeleportPacket(this.currentLocation);
 
         PacketContainer headRotationPacket = createHeadRotationPacket(this.currentLocation.getYaw());
         sendPacketsToRelevantViewers(List.of(teleportPacket, headRotationPacket));
+    }
+
+    /**
+     * Paquet de téléportation absolue de l'entité. Avant la 1.21.2 il porte trois double et deux byte ; ensuite
+     * (1.21.2 à 26.x) la position voyage dans un PositionMoveRotation, suivi de la liste des déplacements relatifs
+     * (vide : tout est absolu).
+     */
+    private PacketContainer createTeleportPacket(Location location) {
+        PacketContainer teleportPacket = plugin.getProtocolManager().createPacket(PacketType.Play.Server.ENTITY_TELEPORT);
+        teleportPacket.getIntegers().write(0, entityId);
+        if (teleportPacket.getDoubles().size() >= 3) {
+            teleportPacket.getDoubles()
+                .write(0, location.getX())
+                .write(1, location.getY())
+                .write(2, location.getZ());
+            teleportPacket.getBytes()
+                .write(0, (byte) (location.getYaw() * 256.0F / 360.0F))
+                .write(1, (byte) (location.getPitch() * 256.0F / 360.0F));
+        } else {
+            writePositionMoveRotation(teleportPacket, location);
+        }
+        teleportPacket.getBooleans().write(0, owner.isOnGround());
+        return teleportPacket;
+    }
+
+    private void writePositionMoveRotation(PacketContainer packet, Location location) {
+        try {
+            if (positionValuesConstructor == null) {
+                Class<?> vecClass = MinecraftReflection.getVec3DClass();
+                Class<?> valuesClass = MinecraftReflection.getMinecraftClass("world.entity.PositionMoveRotation");
+                positionVecConstructor = vecClass.getConstructor(double.class, double.class, double.class);
+                positionValuesClass = valuesClass;
+                positionValuesConstructor = valuesClass.getConstructor(vecClass, vecClass, float.class, float.class);
+            }
+            Object position = positionVecConstructor.newInstance(location.getX(), location.getY(), location.getZ());
+            Object motion = positionVecConstructor.newInstance(0D, 0D, 0D);
+            Object values = positionValuesConstructor.newInstance(position, motion, location.getYaw(), location.getPitch());
+            packet.getModifier().withType(positionValuesClass).write(0, values);
+            StructureModifier<Object> relatives = packet.getModifier().withType(Set.class);
+            if (relatives.size() > 0) {
+                relatives.write(0, Collections.emptySet());
+            }
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("PositionMoveRotation introuvable ou changé dans cette version du serveur", e);
+        }
     }
 
     public void despawn() {

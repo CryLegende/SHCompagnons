@@ -17,6 +17,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 public class CompagnonCommand implements CommandExecutor, TabCompleter {
@@ -117,12 +118,28 @@ public class CompagnonCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        if (plugin.getPetManager().getPlayerPetTypeKey(target) == null &&
-            plugin.getDatabaseManager().getPlayerPetType(target.getUniqueId()).join() == null) { // join() pour attendre le résultat async
-            plugin.getConfigManager().sendMessage(sender, "admin_player_no_pet_to_unset", Map.of("{player}", target.getName()));
+        if (plugin.getPetManager().getPlayerPetTypeKey(target) != null) {
+            finishUnset(sender, target);
             return;
         }
 
+        // Pas de join() : attendre la base sur le thread principal gèle tout le serveur si elle tarde,
+        // et le Watchdog finit par l'arrêter. On reprend sur le thread principal une fois la réponse reçue.
+        plugin.getDatabaseManager().getPlayerPetType(target.getUniqueId()).whenComplete((petType, error) -> {
+            if (error != null) {
+                plugin.getLogger().log(Level.WARNING, "Lecture du compagnon de " + target.getName() + " impossible, retrait quand même", error);
+            }
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (error == null && petType == null) {
+                    plugin.getConfigManager().sendMessage(sender, "admin_player_no_pet_to_unset", Map.of("{player}", target.getName()));
+                    return;
+                }
+                finishUnset(sender, target);
+            });
+        });
+    }
+
+    private void finishUnset(@NotNull CommandSender sender, @NotNull Player target) {
         plugin.getPetManager().removePetAndClearDatabase(target); // Message au joueur cible dans PetManager
         plugin.getConfigManager().sendMessage(sender, "admin_pet_unset_success", Map.of("{player}", target.getName()));
     }
