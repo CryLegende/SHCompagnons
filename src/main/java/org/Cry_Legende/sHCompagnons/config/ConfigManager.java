@@ -7,10 +7,16 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.MemorySection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -81,18 +87,7 @@ public class ConfigManager {
         this.rightArmPoseZDegrees = config.getDouble("companion_settings.right_arm_pose_degrees.z", 0.0);
         this.armorstandYawOffsetDegrees = config.getDouble("companion_settings.armorstand_yaw_offset_degrees", 0.0);
 
-        this.messagePrefix = ChatColor.translateAlternateColorCodes('&', config.getString("messages.prefix", "&8[&bSHC&8] &r"));
-        ConfigurationSection msgSection = config.getConfigurationSection("messages");
-        if (msgSection != null) {
-            for (String key : msgSection.getKeys(false)) {
-                if (msgSection.isString(key)) {
-                    messages.put(key, msgSection.getString(key)); // Stocker les messages bruts (non colorés)
-                }
-            }
-            plugin.getLogger().info("Messages chargés. Préfixe: '" + this.messagePrefix + ChatColor.RESET + "'");
-        } else {
-            plugin.getLogger().warning("Section 'messages' non trouvée dans config.yml.");
-        }
+        loadMessages();
 
         ConfigurationSection petsSection = config.getConfigurationSection("pets");
         if (petsSection != null) {
@@ -167,6 +162,44 @@ public class ConfigManager {
         } else {
             plugin.getLogger().warning("Aucune section 'pets' trouvée dans config.yml. Aucun pet ne sera disponible.");
         }
+    }
+
+    /**
+     * Messages lus dans messages.yml. S'il n'existe pas encore, il est créé à partir de l'ancienne section
+     * « messages » de config.yml quand elle existe (textes déjà personnalisés gardés), sinon depuis le jar.
+     * Les clés absentes du fichier prennent la valeur du jar.
+     */
+    private void loadMessages() {
+        File file = new File(plugin.getDataFolder(), "messages.yml");
+        if (!file.exists()) {
+            ConfigurationSection legacy = config.getConfigurationSection("messages");
+            if (legacy != null) {
+                YamlConfiguration migrated = new YamlConfiguration();
+                for (String key : legacy.getKeys(false)) {
+                    migrated.set(key, legacy.get(key));
+                }
+                try {
+                    migrated.save(file);
+                    plugin.getLogger().info("Messages repris de config.yml dans messages.yml.");
+                } catch (IOException e) {
+                    plugin.getLogger().log(Level.SEVERE, "Impossible d'écrire messages.yml", e);
+                }
+            } else {
+                plugin.saveResource("messages.yml", false);
+            }
+        }
+        YamlConfiguration messagesFile = YamlConfiguration.loadConfiguration(file);
+        InputStream bundled = plugin.getResource("messages.yml");
+        if (bundled != null) {
+            messagesFile.setDefaults(YamlConfiguration.loadConfiguration(new InputStreamReader(bundled, StandardCharsets.UTF_8)));
+        }
+        this.messagePrefix = ChatColor.translateAlternateColorCodes('&', messagesFile.getString("prefix", ""));
+        for (String key : messagesFile.getKeys(false)) {
+            if (messagesFile.isString(key)) {
+                messages.put(key, messagesFile.getString(key)); // messages bruts, colorés à l'envoi
+            }
+        }
+        plugin.getLogger().info(messages.size() + " messages chargés.");
     }
 
     @NotNull

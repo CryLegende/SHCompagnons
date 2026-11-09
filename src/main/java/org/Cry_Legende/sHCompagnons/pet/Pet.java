@@ -44,6 +44,10 @@ public class Pet {
     private static volatile Constructor<?> positionValuesConstructor;
     // Le déplacement relatif a-t-il encore ses champs short (absents en 26.x) ? null tant que non vérifié
     private static volatile Boolean relativeMoveHasShorts;
+    // Paquet de téléportation construit sans la fabrique de ProtocolLib (1.21.2+), vecteur de mouvement nul partagé (immuable)
+    private static volatile Constructor<?> teleportPacketConstructor;
+    private static volatile Object zeroMotion;
+    private static volatile boolean directTeleportUnavailable;
 
     private final SHCompagnons plugin;
     private final Player owner;
@@ -81,6 +85,8 @@ public class Pet {
     private static final float[] ANIM_GLIDE_VERTICAL = new float[]{-0.3F, -0.3F, -0.25F, -0.25F, -0.2F, -0.2F, -0.1F, -0.1F, 0.0F, 0.0F, 0.1F, 0.1F, 0.2F, 0.2F, 0.25F, 0.25F, 0.3F, 0.3F, 0.3F, 0.3F, 0.25F, 0.25F, 0.2F, 0.2F, 0.1F, 0.0F, 0.0F, -0.1F, -0.1F, -0.2F, -0.2F, -0.25F, -0.25F, -0.3F, -0.3F};
     private static final float[] ANIM_BOUNCE_VERTICAL = new float[]{-0.3F, -0.15F, 0.1F, 0.2F, 0.25F, 0.3F, 0.3F, 0.25F, 0.2F, 0.1F, -0.15F};
     private final double PET_VIEW_DISTANCE_SQUARED = 60 * 60;
+    // Position des joueurs proches relue à chaque tick sans créer de Location
+    private final Location scratchLocation = new Location(null, 0, 0, 0);
 
 
     public Pet(@NotNull SHCompagnons plugin, @NotNull Player owner, @NotNull PetConfig petConfig) {
@@ -371,7 +377,7 @@ public class Pet {
         List<Player> playersInVicinity = new ArrayList<>();
         Set<UUID> vicinityIds = new HashSet<>();
         for (Player p : ownerWorld.getPlayers()) {
-            if (p.getLocation().distanceSquared(ownerLocation) <= PET_VIEW_DISTANCE_SQUARED) {
+            if (p.getLocation(scratchLocation).distanceSquared(ownerLocation) <= PET_VIEW_DISTANCE_SQUARED) {
                 playersInVicinity.add(p);
                 vicinityIds.add(p.getUniqueId());
             }
@@ -617,6 +623,10 @@ public class Pet {
      * (vide : tout est absolu).
      */
     private PacketContainer createTeleportPacket(Location location) {
+        PacketContainer direct = createTeleportPacketDirect(location);
+        if (direct != null) {
+            return direct;
+        }
         PacketContainer teleportPacket = plugin.getProtocolManager().createPacket(PacketType.Play.Server.ENTITY_TELEPORT);
         teleportPacket.getIntegers().write(0, entityId);
         if (teleportPacket.getDoubles().size() >= 3) {
@@ -632,6 +642,38 @@ public class Pet {
         }
         teleportPacket.getBooleans().write(0, owner.isOnGround());
         return teleportPacket;
+    }
+
+    /**
+     * Paquet de téléportation construit directement (1.21.2 à 26.x : record ClientboundTeleportEntityPacket), sans
+     * passer par la fabrique de ProtocolLib qui recrée et remplit un paquet par défaut à chaque appel. Mêmes valeurs
+     * que la voie ProtocolLib. null si la classe n'existe pas dans cette version : on reprend la voie ProtocolLib.
+     */
+    @Nullable
+    private PacketContainer createTeleportPacketDirect(Location location) {
+        if (directTeleportUnavailable) {
+            return null;
+        }
+        try {
+            if (teleportPacketConstructor == null) {
+                Class<?> vecClass = MinecraftReflection.getVec3DClass();
+                Class<?> valuesClass = MinecraftReflection.getMinecraftClass("world.entity.PositionMoveRotation");
+                Class<?> packetClass = MinecraftReflection.getMinecraftClass("network.protocol.game.ClientboundTeleportEntityPacket");
+                positionVecConstructor = vecClass.getConstructor(double.class, double.class, double.class);
+                positionValuesClass = valuesClass;
+                positionValuesConstructor = valuesClass.getConstructor(vecClass, vecClass, float.class, float.class);
+                zeroMotion = positionVecConstructor.newInstance(0D, 0D, 0D);
+                teleportPacketConstructor = packetClass.getConstructor(int.class, valuesClass, Set.class, boolean.class);
+            }
+            Object position = positionVecConstructor.newInstance(location.getX(), location.getY(), location.getZ());
+            Object values = positionValuesConstructor.newInstance(position, zeroMotion, location.getYaw(), location.getPitch());
+            Object handle = teleportPacketConstructor.newInstance(entityId, values, Collections.emptySet(), owner.isOnGround());
+            return new PacketContainer(PacketType.Play.Server.ENTITY_TELEPORT, handle);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            directTeleportUnavailable = true;
+            plugin.getLogger().fine("Paquet de téléportation direct indisponible, voie ProtocolLib : " + e);
+            return null;
+        }
     }
 
     private void writePositionMoveRotation(PacketContainer packet, Location location) {

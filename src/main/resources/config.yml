@@ -1,7 +1,17 @@
-# Configuration de la base de données
-# type peut être "SQLITE" ou "MYSQL"
+# SHCompagnons : compagnons visuels (têtes de joueur portées par un porte-armure invisible, en paquets) qui suivent
+# leur propriétaire. Le compagnon choisi est enregistré en base et recréé à chaque connexion.
+#
+# Commandes (alias /shc, /compagnons) :
+#   /shcompagnons set <joueur> <type>   donne un compagnon à un joueur      shcompagnons.admin.set
+#   /shcompagnons unset <joueur>         retire le compagnon d'un joueur    shcompagnons.admin.unset
+#   /shcompagnons reload                 recharge config.yml et messages.yml  shcompagnons.admin.reload
+#   /shcompagnons help                   aide                                 shcompagnons.admin
+#
+# Messages : messages.yml.
+
+# Base de données : SQLITE (fichier shcompagnons.db) ou MYSQL
 database:
-  type: "MYSQL" # ou MYSQL
+  type: "MYSQL"
   mysql:
     host: "127.0.0.1"
     port: 3306
@@ -9,7 +19,7 @@ database:
     username: "utilisateur"
     password: "CHANGE_ME"
     useSSL: false
-    # Propriétés additionnelles pour HikariCP si besoin (décommentez et adaptez)
+    # Propriétés passées à HikariCP
     properties:
       autoReconnect: true
     #   cachePrepStmts: true
@@ -23,69 +33,24 @@ database:
     #   elideSetAutoCommits: true
     #   maintainTimeStats: false
 
+# Placement et mouvement des compagnons
 companion_settings:
+  # Hauteur du porte-armure par rapport aux pieds du joueur (blocs)
   armorstand_base_vertical_offset: 0.6
+  # Pose du bras droit qui tient la tête (degrés)
   right_arm_pose_degrees:
     x: -45
     y: 45
     z: 0
-  
-  # Nouvel ajout : Décalage du Yaw de l'ArmorStand par rapport au joueur (en degrés)
-  # 0.0 = L'ArmorStand regarde dans la même direction que le joueur.
-  # 90.0 = L'ArmorStand regarde à 90 degrés vers la DROITE du joueur.
-  # -90.0 = L'ArmorStand regarde à 90 degrés vers la GAUCHE du joueur.
-  # 180.0 = L'ArmorStand regarde dans la direction opposée au joueur (fait face au joueur).
-  armorstand_yaw_offset_degrees: 190.0 
 
+  # Orientation du compagnon par rapport au regard du joueur (degrés)
+  # 0 = même direction, 90 = vers la droite, -90 = vers la gauche, 180 = face au joueur
+  armorstand_yaw_offset_degrees: 190.0
+
+  # Part de l'écart rattrapée à chaque tick (1 = colle au joueur)
   follow_speed: 1
+  # Au-delà de cette distance au carré (blocs²), le compagnon est téléporté au lieu de glisser
   max_distance_before_teleport_squared: 225
-
-
-# ============================================================
-# Messages du Plugin
-# Vous pouvez utiliser des codes couleurs avec '&'.
-# Placeholders disponibles:
-#   {player} - Nom du joueur cible (dans les commandes admin)
-#   {pet_type_key} - La clé du type de pet (ex: ghast_buddy)
-#   {pet_display_name} - Le nom d'affichage du pet (ex: &fBulle &7Ghast)
-#   {admin_sender} - Nom de celui qui exécute la commande admin (ex: Console, Cry_Legende)
-#   {command_label} - L'alias de commande utilisé (ex: shc, compagnons)
-# ============================================================
-messages:
-  prefix: "&7&l« &6&lSH &8&l» " # Préfixe optionnel pour tous les messages (laisser vide si non désiré)
-
-  # Messages pour les joueurs (visibles par le joueur qui reçoit le pet, etc.)
-  # pet_equipped: "{prefix}&aVotre compagnon {pet_display_name}&a a été équipé !"
-  pet_equipped: ""
-  # pet_removed: "{prefix}&eVotre compagnon a été retiré."
-  pet_removed: ""
-  pet_save_error: "{prefix}&cErreur lors de la sauvegarde de votre compagnon."
-  pet_remove_db_error: "{prefix}&cErreur lors du retrait de votre compagnon de la base de données."
-  pet_type_no_longer_available_on_reload: "{prefix}&eVotre ancien type de compagnon n'est plus disponible et a été retiré."
-
-  # Messages pour les administrateurs (visibles par celui qui exécute les commandes)
-  admin_no_permission_command: "&8&l« &f&lSH &8&l» &fCommande inconnue, essayer autre chose."
-  admin_no_permission_subcommand: "&8&l« &f&lSH &8&l» &fCommande inconnue, essayer autre chose."
-  admin_usage_set: "{prefix}&cUsage: /{command_label} set <joueur> <type_pet>"
-  admin_usage_unset: "{prefix}&cUsage: /{command_label} unset <joueur>"
-  admin_player_not_online: "{prefix}&cLe joueur '{player}' n'est pas en ligne ou n'existe pas."
-  admin_pet_type_not_exists: "{prefix}&cLe type de compagnon '{pet_type_key}' n'existe pas."
-  admin_available_types_info: "&7Types disponibles: {types_list}" # Pas de préfixe pour mieux s'aligner
-  admin_pet_set_success: "{prefix}&aLe compagnon {pet_display_name}&a a été défini pour {player}."
-  admin_player_no_pet_to_unset: "{prefix}&e{player} n'a pas de compagnon actif ou enregistré à retirer."
-  admin_pet_unset_success: "{prefix}&aLe compagnon de {player} a été retiré (s'il en avait un)."
-  admin_reload_start: "{prefix}&eRechargement de la configuration de SHCompagnons..."
-  admin_reload_success: "{prefix}&aLa configuration de SHCompagnons a été rechargée !"
-  admin_unknown_command_no_help_permission: "{prefix}&cCommande inconnue. Vous n'avez pas non plus la permission pour voir l'aide."
-
-  # Messages d'aide (ne pas mettre de préfixe ici si vous voulez les garder propres)
-  help_header: "&b--- Aide SHCompagnons (v{plugin_version}) ---"
-  help_set: "&6/{command_label} set <joueur> <type_pet> &7- Définit un compagnon."
-  help_unset: "&6/{command_label} unset <joueur> &7- Retire le compagnon."
-  help_reload: "&6/{command_label} reload &7- Recharge la configuration."
-  help_footer: "&6/{command_label} help &7- Affiche ce message d'aide."
-
-
 
 # Configuration des pets
 # Vous pouvez ajouter autant de pets que vous voulez ici.

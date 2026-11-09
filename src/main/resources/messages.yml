@@ -1,0 +1,42 @@
+# Messages de SHCompagnons. Codes couleur avec &.
+# Placeholders :
+#   {prefix} - le préfixe ci-dessous
+#   {player} - joueur cible (commandes admin)
+#   {pet_type_key} - clé du type de compagnon (ex : ghast)
+#   {pet_display_name} - nom affiché du compagnon
+#   {types_list} - liste des types disponibles
+#   {command_label} - alias de commande utilisé (shc, compagnons)
+#   {plugin_version} - version du plugin
+# Un message vide ("") n'est pas envoyé.
+
+# Préfixe ajouté devant les messages (vide : aucun)
+prefix: "&7&l« &6&lSH &8&l» "
+
+# Joueur qui reçoit ou perd un compagnon
+pet_equipped: ""
+pet_removed: ""
+pet_save_error: "{prefix}&cErreur lors de la sauvegarde de votre compagnon."
+pet_remove_db_error: "{prefix}&cErreur lors du retrait de votre compagnon de la base de données."
+pet_type_no_longer_available_on_reload: "{prefix}&eVotre ancien type de compagnon n'est plus disponible et a été retiré."
+
+# Celui qui exécute les commandes admin
+admin_no_permission_command: "&8&l« &f&lSH &8&l» &fCommande inconnue, essayer autre chose."
+admin_no_permission_subcommand: "&8&l« &f&lSH &8&l» &fCommande inconnue, essayer autre chose."
+admin_usage_set: "{prefix}&cUsage: /{command_label} set <joueur> <type_pet>"
+admin_usage_unset: "{prefix}&cUsage: /{command_label} unset <joueur>"
+admin_player_not_online: "{prefix}&cLe joueur '{player}' n'est pas en ligne ou n'existe pas."
+admin_pet_type_not_exists: "{prefix}&cLe type de compagnon '{pet_type_key}' n'existe pas."
+admin_available_types_info: "&7Types disponibles: {types_list}"
+admin_pet_set_success: "{prefix}&aLe compagnon {pet_display_name}&a a été défini pour {player}."
+admin_player_no_pet_to_unset: "{prefix}&e{player} n'a pas de compagnon actif ou enregistré à retirer."
+admin_pet_unset_success: "{prefix}&aLe compagnon de {player} a été retiré (s'il en avait un)."
+admin_reload_start: "{prefix}&eRechargement de la configuration de SHCompagnons..."
+admin_reload_success: "{prefix}&aLa configuration de SHCompagnons a été rechargée !"
+admin_unknown_command_no_help_permission: "{prefix}&cCommande inconnue. Vous n'avez pas non plus la permission pour voir l'aide."
+
+# Aide (/shcompagnons help)
+help_header: "&b--- Aide SHCompagnons (v{plugin_version}) ---"
+help_set: "&6/{command_label} set <joueur> <type_pet> &7- Définit un compagnon."
+help_unset: "&6/{command_label} unset <joueur> &7- Retire le compagnon."
+help_reload: "&6/{command_label} reload &7- Recharge la configuration."
+help_footer: "&6/{command_label} help &7- Affiche ce message d'aide."
