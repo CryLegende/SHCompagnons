@@ -48,6 +48,9 @@ public class Pet {
     private static volatile Constructor<?> teleportPacketConstructor;
     private static volatile Object zeroMotion;
     private static volatile boolean directTeleportUnavailable;
+    // Joueurs de chaque monde pour le tick en cours (voir playersOf)
+    private static final Map<World, List<Player>> playersByWorld = new ConcurrentHashMap<>();
+    private static volatile int playersTick = Integer.MIN_VALUE;
 
     private final SHCompagnons plugin;
     private final Player owner;
@@ -376,7 +379,7 @@ public class Pet {
         Location ownerLocation = owner.getLocation();
         List<Player> playersInVicinity = new ArrayList<>();
         Set<UUID> vicinityIds = new HashSet<>();
-        for (Player p : ownerWorld.getPlayers()) {
+        for (Player p : playersOf(ownerWorld)) {
             if (p.getLocation(scratchLocation).distanceSquared(ownerLocation) <= PET_VIEW_DISTANCE_SQUARED) {
                 playersInVicinity.add(p);
                 vicinityIds.add(p.getUniqueId());
@@ -403,6 +406,19 @@ public class Pet {
                 }
             }
         }
+    }
+
+    /**
+     * Joueurs d'un monde, copiés une seule fois par tick pour tous les compagnons (World.getPlayers recrée la liste à
+     * chaque appel). Listes jamais modifiées ensuite, table concurrente : sûr quel que soit le fil appelant.
+     */
+    private static List<Player> playersOf(World world) {
+        int tick = Bukkit.getCurrentTick();
+        if (tick != playersTick) {
+            playersByWorld.clear();
+            playersTick = tick;
+        }
+        return playersByWorld.computeIfAbsent(world, World::getPlayers);
     }
 
     private void despawnForAllViewers(boolean setLogicallyInvisibleState) {
