@@ -2,6 +2,7 @@ package org.Cry_Legende.sHCompagnons.commands;
 
 import org.Cry_Legende.sHCompagnons.SHCompagnons;
 import org.Cry_Legende.sHCompagnons.config.PetConfig;
+import org.Cry_Legende.sHCompagnons.network.RemotePlayers;
 import org.bukkit.Bukkit;
 // import org.bukkit.ChatColor; // Remplacé par l'usage de ConfigManager pour les messages
 import org.bukkit.command.Command;
@@ -86,9 +87,16 @@ public class CompagnonCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    /** Joueur connecté sur un autre serveur du réseau, ou null (et toujours null sans SHNetwork). */
+    private RemotePlayers.Remote findRemote(@NotNull String playerName) {
+        RemotePlayers remotePlayers = plugin.getRemotePlayers();
+        return remotePlayers == null ? null : remotePlayers.find(playerName);
+    }
+
     private void handleSetCommand(@NotNull CommandSender sender, @NotNull String playerName, @NotNull String petTypeKey, @NotNull String label) {
         Player target = Bukkit.getPlayerExact(playerName);
-        if (target == null) {
+        RemotePlayers.Remote remote = target == null ? findRemote(playerName) : null;
+        if (target == null && remote == null) {
             plugin.getConfigManager().sendMessage(sender, "admin_player_not_online", Map.of("{player}", playerName));
             return;
         }
@@ -104,6 +112,16 @@ public class CompagnonCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
+        if (remote != null) {
+            // Le serveur du joueur le lui donne (même configuration des compagnons partout) et le prévient
+            plugin.getRemotePlayers().runFor(remote.uuid(), "shcompagnons set " + remote.name() + " " + petTypeKey);
+            plugin.getConfigManager().sendMessage(sender, "admin_pet_set_success", Map.of(
+                "{pet_display_name}", petConfig.getDisplayName(),
+                "{player}", remote.name()
+            ));
+            return;
+        }
+
         plugin.getPetManager().setPet(target, petTypeKey); // Le message au joueur cible est géré dans PetManager
         plugin.getConfigManager().sendMessage(sender, "admin_pet_set_success", Map.of(
             "{pet_display_name}", petConfig.getDisplayName(),
@@ -113,8 +131,13 @@ public class CompagnonCommand implements CommandExecutor, TabCompleter {
 
     private void handleUnsetCommand(@NotNull CommandSender sender, @NotNull String playerName, @NotNull String label) {
         Player target = Bukkit.getPlayerExact(playerName);
-        if (target == null) {
+        RemotePlayers.Remote remote = target == null ? findRemote(playerName) : null;
+        if (target == null && remote == null) {
             plugin.getConfigManager().sendMessage(sender, "admin_player_not_online", Map.of("{player}", playerName));
+            return;
+        }
+        if (remote != null) {
+            unsetRemote(sender, remote);
             return;
         }
 
@@ -135,6 +158,23 @@ public class CompagnonCommand implements CommandExecutor, TabCompleter {
                     return;
                 }
                 finishUnset(sender, target);
+            });
+        });
+    }
+
+    /** Joueur d'un autre serveur : le compagnon est en base commune, son serveur le lui retire et le prévient. */
+    private void unsetRemote(@NotNull CommandSender sender, @NotNull RemotePlayers.Remote remote) {
+        plugin.getDatabaseManager().getPlayerPetType(remote.uuid()).whenComplete((petType, error) -> {
+            if (error != null) {
+                plugin.getLogger().log(Level.WARNING, "Lecture du compagnon de " + remote.name() + " impossible, retrait quand même", error);
+            }
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (error == null && petType == null) {
+                    plugin.getConfigManager().sendMessage(sender, "admin_player_no_pet_to_unset", Map.of("{player}", remote.name()));
+                    return;
+                }
+                plugin.getRemotePlayers().runFor(remote.uuid(), "shcompagnons unset " + remote.name());
+                plugin.getConfigManager().sendMessage(sender, "admin_pet_unset_success", Map.of("{player}", remote.name()));
             });
         });
     }
@@ -183,6 +223,9 @@ public class CompagnonCommand implements CommandExecutor, TabCompleter {
             if (subCommand.equals("set") || subCommand.equals("unset")) {
                 if (sender.hasPermission("shcompagnons.admin." + subCommand)) {
                     options.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList()));
+                    if (plugin.getRemotePlayers() != null) {
+                        options.addAll(plugin.getRemotePlayers().names());
+                    }
                 }
             }
         } else if (args.length == 3) {

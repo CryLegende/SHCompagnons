@@ -18,10 +18,12 @@ Plugin de compagnons packet-based pour Minecraft.
 
 Utilisé sur : **Opale · Lobby**.
 
+Le compagnon choisi est enregistré en base (table `player_pets`) et relu à chaque connexion : un joueur le garde d'un serveur à l'autre dès que les serveurs partagent la même base. Avec **SHNetwork** (facultatif), `/shc set` et `/shc unset` atteignent aussi un joueur connecté sur un autre serveur du réseau : son serveur lui donne ou lui retire le compagnon et le prévient. Sans SHNetwork, ou avec `reseau.actif: false`, seuls les joueurs du serveur sont atteints.
+
 ## Dépendances
 
 - Obligatoires : `ProtocolLib`
-- Optionnelles : `PlaceholderAPI`
+- Optionnelles : `PlaceholderAPI`, `SHNetwork`
 
 ## Commandes
 

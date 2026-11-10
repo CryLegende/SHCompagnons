@@ -9,6 +9,13 @@
 #
 # Messages : messages.yml.
 
+# Avec SHNetwork, /shcompagnons set et unset atteignent un joueur connecté sur un autre serveur du réseau : son serveur
+# lui donne ou lui retire le compagnon et le prévient. Les serveurs doivent partager la même base (database ci-dessous)
+# et la même liste de pets. Sans SHNetwork, ou à false, seuls les joueurs de ce serveur sont atteints.
+# Se lit au démarrage.
+reseau:
+  actif: true
+
 # Base de données : SQLITE (fichier shcompagnons.db) ou MYSQL
 database:
   type: "MYSQL"

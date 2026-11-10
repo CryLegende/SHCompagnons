@@ -8,6 +8,8 @@ import org.Cry_Legende.sHCompagnons.database.DatabaseManager;
 import org.Cry_Legende.sHCompagnons.database.MySQLManager;
 import org.Cry_Legende.sHCompagnons.database.SQLiteManager;
 import org.Cry_Legende.sHCompagnons.listeners.PlayerListener;
+import org.Cry_Legende.sHCompagnons.network.RemotePlayers;
+import org.Cry_Legende.sHCompagnons.network.ShNetworkPlayers;
 import org.Cry_Legende.sHCompagnons.pet.PetManager;
 import org.Cry_Legende.sHCompagnons.placeholder.PAPIHook;
 import org.bukkit.Bukkit;
@@ -28,6 +30,8 @@ public class SHCompagnons extends JavaPlugin {
     private DatabaseManager databaseManager;
     private PetManager petManager;
     private PluginDescriptionFile pdfFile;
+    // Joueurs des autres serveurs du réseau ; null sans SHNetwork
+    private RemotePlayers remotePlayers;
 
 
     @Override
@@ -80,6 +84,8 @@ public class SHCompagnons extends JavaPlugin {
         petManager = new PetManager(this);
         getLogger().info("PetManager initialisé.");
 
+        enableNetwork();
+
         getLogger().info("Enregistrement des commandes...");
         CompagnonCommand compagnonCommand = new CompagnonCommand(this);
         getCommand("shcompagnons").setExecutor(compagnonCommand);
@@ -114,6 +120,23 @@ public class SHCompagnons extends JavaPlugin {
         }
         getLogger().info(pdfFile.getName() + " a été désactivé.");
         instance = null;
+    }
+
+    /**
+     * Passe en mode réseau si SHNetwork est installé et 'reseau.actif' est vrai : /shc set et /shc unset atteignent
+     * un joueur connecté sur un autre serveur. Le compagnon est déjà en base commune et relu à chaque connexion.
+     * La classe qui touche à SHNetwork n'est résolue qu'ici : sans lui, rien n'est chargé.
+     */
+    private void enableNetwork() {
+        if (!getConfig().getBoolean("reseau.actif", true)) return;
+        if (!getServer().getPluginManager().isPluginEnabled("SHNetwork")) return;
+        try {
+            remotePlayers = ShNetworkPlayers.open();
+            getLogger().info("SHNetwork détecté : /shc set et /shc unset atteignent les joueurs de tout le réseau.");
+        } catch (RuntimeException | LinkageError e) {
+            remotePlayers = null;
+            getLogger().log(Level.SEVERE, "SHNetwork présent mais inutilisable, commandes locales à ce serveur : " + e);
+        }
     }
 
     private boolean setupDatabase() {
@@ -168,5 +191,10 @@ public class SHCompagnons extends JavaPlugin {
     @NotNull
     public PetManager getPetManager() {
         return petManager;
+    }
+
+    /** Joueurs des autres serveurs du réseau, ou null sans SHNetwork. */
+    public RemotePlayers getRemotePlayers() {
+        return remotePlayers;
     }
 }
