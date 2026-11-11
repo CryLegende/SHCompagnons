@@ -27,26 +27,83 @@ Les listes de passagers envoyées par le serveur ou par UnlimitedNametags garden
 
 Le compagnon choisi est enregistré en base (table `player_pets`) et relu à chaque connexion : un joueur le garde d'un serveur à l'autre dès que les serveurs partagent la même base. Avec **SHNetwork** (facultatif), `/shc set` et `/shc unset` atteignent aussi un joueur connecté sur un autre serveur du réseau. Sans SHNetwork, ou avec `reseau.actif: false`, seuls les joueurs du serveur sont atteints.
 
-## Importer un modèle
+## Importer un modèle de block-display.com
 
-1. Sur la page du modèle (block-display.com), « Get the command » et copier la ou les commandes `/summon`.
-2. Les coller dans `plugins/SHCompagnons/models/<nom>.txt`, une commande par ligne. Un fichier `.yml` de BlockDisplayCreator (`display.spawn-command`) se dépose aussi tel quel.
-3. Déclarer le compagnon dans `config.yml` :
+N'importe quel modèle de [block-display.com](https://block-display.com/browse) devient un compagnon, sans pack de ressources ni mod côté joueur.
+
+### 1. Récupérer la commande
+
+1. Ouvrir la page du modèle et attendre que l'aperçu 3D soit chargé.
+2. Cliquer **Get the command**. La fenêtre **Export to Minecraft** s'ouvre.
+3. Garder les réglages par défaut :
+
+   | Réglage | Valeur |
+   |---|---|
+   | Export type | **Model only** |
+   | Command version | **Minecraft 26.3** |
+   | Command format | **Command Block** (pas Axiom) |
+
+4. Cliquer **Copy** sur la ligne **Summon #1**. Un gros modèle a plusieurs lignes (**Summon #2**, **Summon #3**…) : les copier toutes.
+
+Les lignes **Remove Block_Display** / **Remove Item_Display** (`/kill`) ne servent pas.
+
+### 2. Déposer le fichier
+
+Coller la commande dans `plugins/SHCompagnons/models/<nom>.txt`, une commande par ligne, dans l'ordre. Le nom du fichier (sans `.txt`, en minuscules) est le nom du modèle.
+
+```text
+# Sunken Mossy Smooth Stone, par NightSteak9 : https://bde.gg/b/22159
+/summon block_display ~-0.5 ~-0.5 ~-0.5 {Passengers:[{id:"minecraft:item_display",item:{id:"minecraft:player_head",...}}]}
+```
+
+Les lignes qui commencent par `#` sont des commentaires. Une ligne `/kill` collée par erreur est ignorée.
+
+### 3. Vérifier le modèle
+
+`/shc reload` puis `/shc models` :
+
+```text
+« SH » 1 modèle(s) importé(s) :
+• pierre : 8 entités, 1.00 x 1.00 x 1.00 blocs
+```
+
+La taille affichée est la taille d'origine. Si le modèle n'apparaît pas, la console dit pourquoi (`aucune commande /summon trouvée`, `illisible : …`).
+
+### 4. Déclarer le compagnon
+
+Dans `config.yml`, section `pets` :
 
 ```yaml
 pets:
-  dragon:
-    displayname: "&5Dragon"
-    model: dragon
+  pierre:
+    displayname: "&2Pierre moussue"
+    model: pierre
     animation: GLIDE
-    follow: FREE
     placement:
-      scale: 0.25
+      scale: 0.4
 ```
 
-4. `/shc reload`, `/shc models` (taille d'origine de chaque modèle), `/shc preview dragon` pour l'essayer sans l'enregistrer.
+Taille en jeu = taille d'origine × `placement.scale`. Pour comparer, une tête de compagnon fait 0,25 bloc (0,5 × 0,5). Un modèle de 2 blocs de haut à `scale: 0.2` fait 0,4 bloc.
 
-Le modèle est recentré automatiquement ; `placement.offset` désigne la position de son centre. Formats lus : transformations en 16 nombres ou en translation/rotations/échelle, passagers imbriqués, plusieurs commandes par modèle, objets à composants (1.20.5+) et anciennes têtes `SkullOwner`, blocs avec propriétés, textes JSON ou SNBT.
+### 5. Essayer, régler, donner
+
+1. `/shc reload` puis `/shc preview pierre` : le compagnon s'affiche sur soi pendant 30 s, sans rien enregistrer.
+2. Ajuster `placement` (`scale`, `offset`, `rotation`), puis `/shc reload` et `/shc preview pierre` à nouveau.
+3. `/shc set <joueur> pierre` pour le donner.
+
+### Bon à savoir
+
+- **Placement** : le modèle est recentré tout seul ; `placement.offset` désigne la position de son centre, dans le repère du joueur décrit en tête de `config.yml`. Le déplacer dans l'aperçu du site ne change rien. Le tourner avant **Get the command** change bien la commande.
+- **Animations** : celles de BDEngine ne sont pas reprises. Seule la pose du modèle compte ; le mouvement du compagnon vient de `animation` (`GLIDE`, `BOUNCING`, `SPIN`…).
+- **Coût** : chaque entité du modèle est envoyée à chaque joueur qui voit le compagnon. Ensuite, chacune reçoit un paquet d'orientation quand le propriétaire tourne la tête. Garder les modèles sous une cinquantaine d'entités (`/shc models` donne le nombre).
+- **Licence** : elle figure sur la page du modèle. En **BDL BY-NC** (usage non commercial), demander à l'auteur avant de vendre le compagnon en boutique.
+- **Autres sources** : les commandes de BDEngine (bdengine.app, **Export to Minecraft**) se collent de la même façon. Un fichier `.yml` de BlockDisplayCreator (`display.spawn-command`) se dépose tel quel dans `models/`. Un `.mcfunction` avec des lignes `summon` se dépose aussi.
+- **Formats lus** :
+  - transformations en 16 nombres ou en translation/rotations/échelle
+  - passagers imbriqués et plusieurs commandes par modèle
+  - objets à composants (1.20.5+) et anciennes têtes `SkullOwner`
+  - blocs avec propriétés
+  - textes JSON ou SNBT
 
 ## Dépendances
 

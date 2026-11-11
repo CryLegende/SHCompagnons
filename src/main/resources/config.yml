@@ -16,13 +16,36 @@
 # Placeholders : %shcompagnons_current_pet_type%, %shcompagnons_current_pet_displayname%.
 # Messages : messages.yml.
 #
-# Importer un modèle de block-display.com (ou de BDEngine) :
-#   1. Sur la page du modèle, « Get the command », copier la ou les commandes /summon.
-#   2. Les coller dans plugins/SHCompagnons/models/<nom>.txt (une commande par ligne). Un fichier .yml de
-#      BlockDisplayCreator (display.spawn-command) se dépose aussi tel quel.
-#   3. Ajouter un compagnon avec « model: <nom> » et régler placement.scale (la taille d'origine du modèle est
-#      donnée par /shcompagnons models), puis /shcompagnons reload et /shcompagnons preview <type>.
-#   Le modèle est recentré automatiquement : placement.offset désigne la position de son centre.
+# ----------------------------------------------------------------------------------------------------------------
+# Importer un modèle de block-display.com
+# ----------------------------------------------------------------------------------------------------------------
+#   1. Ouvrir la page du modèle (https://block-display.com/browse), attendre que l'aperçu 3D soit chargé, puis
+#      cliquer « Get the command ». La fenêtre « Export to Minecraft » s'ouvre.
+#   2. Garder les réglages par défaut : Export type « Model only », Command version « Minecraft 26.3 »,
+#      Command format « Command Block » (pas Axiom).
+#   3. Cliquer « Copy » sur la ligne « Summon #1 » et coller la commande dans plugins/SHCompagnons/models/<nom>.txt.
+#      Un gros modèle a plusieurs lignes (« Summon #2 », « Summon #3 »…) : les coller toutes, une par ligne, dans
+#      l'ordre. Les lignes « Remove … » (/kill) ne servent pas ; collées par erreur, elles sont ignorées. Une ligne
+#      qui commence par # est un commentaire (pratique pour noter l'auteur et le lien du modèle).
+#   4. /shcompagnons reload puis /shcompagnons models : le modèle apparaît avec son nombre d'entités et sa taille
+#      d'origine en blocs. S'il manque, la console dit pourquoi (aucune commande /summon, commande illisible…).
+#   5. Ajouter le compagnon dans pets (en bas du fichier) avec « model: <nom> » (le nom du fichier, sans
+#      l'extension) et une échelle : taille en jeu = taille d'origine x placement.scale. Pour comparer, une tête de
+#      compagnon fait 0,25 bloc (0,5 x 0,5). Ex : un modèle de 2 blocs de haut à scale 0.2 fait 0,4 bloc.
+#   6. /shcompagnons reload puis /shcompagnons preview <type> : le compagnon s'affiche sur soi 30 s, sans rien
+#      enregistrer. Ajuster placement (scale, offset, rotation), recharger, revoir. Puis /shcompagnons set.
+#
+#   Le modèle est recentré tout seul : placement.offset désigne la position de son centre (repère juste en dessous).
+#   On peut tourner le modèle dans l'aperçu du site avant « Get the command » : la commande suit. Le déplacer ne
+#   change rien, il est recentré.
+#   Même chose depuis BDEngine (bdengine.app, menu « Export to Minecraft »). Un fichier .yml de BlockDisplayCreator
+#   (display.spawn-command) se dépose tel quel dans models/, un .mcfunction avec des lignes summon aussi.
+#   Les animations de BDEngine ne sont pas reprises : seule la pose du modèle compte, le mouvement du compagnon vient
+#   de « animation ».
+#   Coût : chaque entité du modèle est envoyée à chaque joueur qui voit le compagnon, puis chacune reçoit un paquet
+#   d'orientation quand le propriétaire tourne la tête. Rester sous une cinquantaine d'entités par modèle.
+#   Licence : elle est indiquée sur la page du modèle. En BDL BY-NC (usage non commercial), demander à l'auteur avant
+#   de vendre ce compagnon en boutique.
 #
 # Repère du placement : origine au sommet de la hitbox du joueur (1,8 bloc debout, plus bas accroupi, en nage ou
 # en élytre), x vers la gauche du joueur, y vers le haut, z vers l'avant. Le modèle tourne avec le regard du joueur.
@@ -95,13 +118,23 @@ companion_settings:
 #   skin                  texture d'une tête de joueur (valeur base64), compagnon = cette tête
 #   skins                 plusieurs textures affichées tour à tour : liste de textures, ou de « value » + « skin_update_interval »
 #   skin_update_interval  durée d'affichage de chaque texture (ticks), pour toute la liste
-#   model                 modèle importé (fichier models/<nom>.txt), à la place d'une tête
+#   model                 modèle importé, à la place d'une tête : nom du fichier de models/ sans l'extension
+#                         (voir « Importer un modèle de block-display.com » en haut du fichier)
 #   animation             NONE, BOUNCING (rebond), GLIDE (montée et descente lentes), WOBBLE_SIDE (balancement),
 #                         GLIDE_WOBBLE (les deux), SPIN (tour sur lui-même)
 #   animation_speed       vitesse de l'animation (1 = normale, 2 = deux fois plus rapide)
 #   animation_amplitude   ampleur des mouvements de l'animation (1 = normale)
 #   follow                ATTACHED ou FREE (voir companion_settings)
 #   placement             offset, rotation, scale (voir companion_settings), seules les clés données changent
+#
+# Exemple de compagnon importé (fichier models/dragon.txt) :
+#   dragon:
+#     displayname: "&5Dragon"
+#     model: dragon
+#     animation: GLIDE
+#     follow: FREE
+#     placement:
+#       scale: 0.25
 pets:
   ghast:
     displayname: "Ghast"

@@ -36,7 +36,8 @@ public final class SummonImporter {
 
     /**
      * Découpe un texte en commandes : chaque ligne qui commence par summon ou /summon ouvre une commande, les lignes
-     * suivantes (hors commentaires #) la prolongent.
+     * suivantes (hors commentaires #) la prolongent. Toute autre commande (/kill de la fenêtre d'export de
+     * block-display.com, etc.) termine la commande en cours et est ignorée.
      */
     public static List<String> splitCommands(String content) {
         List<String> commands = new ArrayList<>();
@@ -47,11 +48,12 @@ public final class SummonImporter {
                 continue;
             }
             String lower = trimmed.toLowerCase(Locale.ROOT);
-            if (lower.startsWith("summon ") || lower.startsWith("/summon ") || lower.startsWith("minecraft:summon ")) {
+            boolean summon = lower.startsWith("summon ") || lower.startsWith("/summon ") || lower.startsWith("minecraft:summon ");
+            if (summon || isOtherCommand(lower)) {
                 if (current != null) {
                     commands.add(current.toString());
                 }
-                current = new StringBuilder(trimmed);
+                current = summon ? new StringBuilder(trimmed) : null;
             } else if (current != null) {
                 current.append(' ').append(trimmed);
             }
@@ -60,6 +62,14 @@ public final class SummonImporter {
             commands.add(current.toString());
         }
         return commands;
+    }
+
+    // Ligne qui commence une autre commande que summon (avec /, ou sans / comme dans un .mcfunction)
+    private static final java.util.regex.Pattern OTHER_COMMAND = java.util.regex.Pattern.compile(
+        "^(kill|execute|tp|teleport|data|function|tag|scoreboard|ride|schedule|setblock|fill|give|say|tellraw|playsound|particle|effect|return)\\s");
+
+    private static boolean isOtherCommand(String lower) {
+        return lower.startsWith("/") || OTHER_COMMAND.matcher(lower).find();
     }
 
     public static List<RawPart> parse(List<String> commands) {
