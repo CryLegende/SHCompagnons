@@ -412,7 +412,10 @@ public final class Pet {
         double next = animation.nextKey(animationTime);
         int duration = Math.max(1, (int) Math.round((next - animationTime) / type.animationSpeed()));
         animationTime = animation.wrap(next);
+        float previousSpin = frame.spin();
         frame = animation.frame(next, type.animationAmplitude());
+        // La rotation n'est renvoyée que si l'animation fait tourner le modèle (SPIN) : 18 octets de moins par pièce
+        boolean turns = frame.spin() != previousSpin;
         nextKeyframeTick = now + duration;
         List<Affine> transforms = new ArrayList<>(ids.length);
         for (Part part : type.parts()) {
@@ -422,11 +425,14 @@ public final class Pet {
             List<PacketWrapper<?>> packets = new ArrayList<>(ids.length);
             for (int i = 0; i < ids.length; i++) {
                 Affine affine = transforms.get(i);
-                packets.add(new WrapperPlayServerEntityMetadata(ids[i], List.of(
-                    new EntityData<>(Part.INTERPOLATION_DELAY, EntityDataTypes.INT, 0),
-                    new EntityData<>(Part.TRANSFORMATION_DURATION, EntityDataTypes.INT, duration),
-                    new EntityData<>(Part.TRANSLATION, EntityDataTypes.VECTOR3F, vector(affine.translation())),
-                    new EntityData<>(Part.LEFT_ROTATION, EntityDataTypes.QUATERNION, quaternion(affine.left())))));
+                List<EntityData<?>> data = new ArrayList<>(4);
+                data.add(new EntityData<>(Part.INTERPOLATION_DELAY, EntityDataTypes.INT, 0));
+                data.add(new EntityData<>(Part.TRANSFORMATION_DURATION, EntityDataTypes.INT, duration));
+                data.add(new EntityData<>(Part.TRANSLATION, EntityDataTypes.VECTOR3F, vector(affine.translation())));
+                if (turns) {
+                    data.add(new EntityData<>(Part.LEFT_ROTATION, EntityDataTypes.QUATERNION, quaternion(affine.left())));
+                }
+                packets.add(new WrapperPlayServerEntityMetadata(ids[i], data));
             }
             Packets.send(viewer, packets);
         }
