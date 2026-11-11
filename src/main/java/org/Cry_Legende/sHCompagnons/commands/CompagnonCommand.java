@@ -1,10 +1,10 @@
 package org.Cry_Legende.sHCompagnons.commands;
 
 import org.Cry_Legende.sHCompagnons.SHCompagnons;
-import org.Cry_Legende.sHCompagnons.config.PetConfig;
+import org.Cry_Legende.sHCompagnons.config.PetType;
+import org.Cry_Legende.sHCompagnons.model.ModelLibrary;
 import org.Cry_Legende.sHCompagnons.network.RemotePlayers;
 import org.bukkit.Bukkit;
-// import org.bukkit.ChatColor; // Remplacé par l'usage de ConfigManager pour les messages
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -16,8 +16,8 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
@@ -76,6 +76,26 @@ public class CompagnonCommand implements CommandExecutor, TabCompleter {
                 handleReloadCommand(sender);
                 break;
 
+            case "preview":
+                if (!sender.hasPermission("shcompagnons.admin.preview")) {
+                    plugin.getConfigManager().sendMessage(sender, "admin_no_permission_subcommand");
+                    return true;
+                }
+                if (args.length < 2 || !(sender instanceof Player player)) {
+                    plugin.getConfigManager().sendMessage(sender, "admin_usage_preview", Map.of("{command_label}", label));
+                    return true;
+                }
+                handlePreviewCommand(player, args[1], args.length > 2 ? args[2] : null);
+                break;
+
+            case "models":
+                if (!sender.hasPermission("shcompagnons.admin.reload")) {
+                    plugin.getConfigManager().sendMessage(sender, "admin_no_permission_subcommand");
+                    return true;
+                }
+                handleModelsCommand(sender);
+                break;
+
             default:
                 if (!sender.hasPermission("shcompagnons.admin")) {
                     plugin.getConfigManager().sendMessage(sender, "admin_unknown_command_no_help_permission");
@@ -101,10 +121,10 @@ public class CompagnonCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        PetConfig petConfig = plugin.getConfigManager().getPetConfig(petTypeKey);
+        PetType petConfig = plugin.getConfigManager().getPetType(petTypeKey);
         if (petConfig == null) {
             plugin.getConfigManager().sendMessage(sender, "admin_pet_type_not_exists", Map.of("{pet_type_key}", petTypeKey));
-            Set<String> availableTypes = plugin.getConfigManager().getPetTypes();
+            java.util.Set<String> availableTypes = plugin.getConfigManager().getPetTypes();
             if (!availableTypes.isEmpty()) {
                 // Pas de préfixe pour ce message car il est une suite du précédent.
                 sender.sendMessage(plugin.getConfigManager().getMessage("admin_available_types_info", Map.of("{types_list}", String.join(", ", availableTypes))));
@@ -114,17 +134,17 @@ public class CompagnonCommand implements CommandExecutor, TabCompleter {
 
         if (remote != null) {
             // Le serveur du joueur le lui donne (même configuration des compagnons partout) et le prévient
-            plugin.getRemotePlayers().runFor(remote.uuid(), "shcompagnons set " + remote.name() + " " + petTypeKey);
+            plugin.getRemotePlayers().runFor(remote.uuid(), "shcompagnons set " + remote.name() + " " + petConfig.key());
             plugin.getConfigManager().sendMessage(sender, "admin_pet_set_success", Map.of(
-                "{pet_display_name}", petConfig.getDisplayName(),
+                "{pet_display_name}", petConfig.displayName(),
                 "{player}", remote.name()
             ));
             return;
         }
 
-        plugin.getPetManager().setPet(target, petTypeKey); // Le message au joueur cible est géré dans PetManager
+        plugin.getPetManager().setPet(target, petConfig); // Le message au joueur cible est géré dans PetManager
         plugin.getConfigManager().sendMessage(sender, "admin_pet_set_success", Map.of(
-            "{pet_display_name}", petConfig.getDisplayName(),
+            "{pet_display_name}", petConfig.displayName(),
             "{player}", target.getName()
         ));
     }
@@ -187,9 +207,54 @@ public class CompagnonCommand implements CommandExecutor, TabCompleter {
     private void handleReloadCommand(@NotNull CommandSender sender) {
         plugin.getConfigManager().sendMessage(sender, "admin_reload_start");
         plugin.getConfigManager().loadConfig();
-        plugin.getPetManager().reloadPetDataForOnlinePlayers();
-        plugin.getConfigManager().sendMessage(sender, "admin_reload_success");
+        plugin.getPetManager().reloadAll();
+        plugin.getConfigManager().sendMessage(sender, "admin_reload_success", Map.of(
+            "{pets}", String.valueOf(plugin.getConfigManager().getPetTypes().size()),
+            "{models}", String.valueOf(plugin.getConfigManager().getModels().all().size())));
         plugin.getLogger().info("Configuration rechargée par " + sender.getName());
+    }
+
+    /** Montre un compagnon sur soi quelques secondes, sans l'enregistrer : pour régler un modèle. */
+    private void handlePreviewCommand(@NotNull Player player, @NotNull String petTypeKey, String secondsArg) {
+        PetType type = plugin.getConfigManager().getPetType(petTypeKey);
+        if (type == null) {
+            plugin.getConfigManager().sendMessage(player, "admin_pet_type_not_exists", Map.of("{pet_type_key}", petTypeKey));
+            return;
+        }
+        int seconds = 30;
+        if (secondsArg != null) {
+            try {
+                seconds = Math.max(1, Math.min(600, Integer.parseInt(secondsArg)));
+            } catch (NumberFormatException ignored) {
+                // durée par défaut
+            }
+        }
+        plugin.getPetManager().preview(player, type, seconds);
+        plugin.getConfigManager().sendMessage(player, "admin_preview_start", Map.of(
+            "{pet_display_name}", type.displayName(),
+            "{seconds}", String.valueOf(seconds)));
+    }
+
+    /** Modèles du dossier models/ : nom, nombre d'entités et taille d'origine. */
+    private void handleModelsCommand(@NotNull CommandSender sender) {
+        Map<String, ModelLibrary.Model> models = plugin.getConfigManager().getModels().all();
+        if (models.isEmpty()) {
+            plugin.getConfigManager().sendMessage(sender, "admin_models_empty");
+            return;
+        }
+        plugin.getConfigManager().sendMessage(sender, "admin_models_header", Map.of("{count}", String.valueOf(models.size())));
+        for (ModelLibrary.Model model : models.values()) {
+            sender.sendMessage(plugin.getConfigManager().getMessage("admin_models_line", Map.of(
+                "{model}", model.name(),
+                "{parts}", String.valueOf(model.parts().size()),
+                "{x}", format(model.size().x),
+                "{y}", format(model.size().y),
+                "{z}", format(model.size().z)), false));
+        }
+    }
+
+    private static String format(float value) {
+        return String.format(Locale.ROOT, "%.2f", value);
     }
 
     private void sendHelp(@NotNull CommandSender sender, @NotNull String label) {
@@ -201,8 +266,12 @@ public class CompagnonCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(plugin.getConfigManager().getMessage("help_set", Map.of("{command_label}", label)));
         if (sender.hasPermission("shcompagnons.admin.unset"))
             sender.sendMessage(plugin.getConfigManager().getMessage("help_unset", Map.of("{command_label}", label)));
-        if (sender.hasPermission("shcompagnons.admin.reload"))
+        if (sender.hasPermission("shcompagnons.admin.preview"))
+            sender.sendMessage(plugin.getConfigManager().getMessage("help_preview", Map.of("{command_label}", label)));
+        if (sender.hasPermission("shcompagnons.admin.reload")) {
+            sender.sendMessage(plugin.getConfigManager().getMessage("help_models", Map.of("{command_label}", label)));
             sender.sendMessage(plugin.getConfigManager().getMessage("help_reload", Map.of("{command_label}", label)));
+        }
 
         sender.sendMessage(plugin.getConfigManager().getMessage("help_footer", Map.of("{command_label}", label)));
     }
@@ -216,8 +285,16 @@ public class CompagnonCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             if (sender.hasPermission("shcompagnons.admin.set")) options.add("set");
             if (sender.hasPermission("shcompagnons.admin.unset")) options.add("unset");
-            if (sender.hasPermission("shcompagnons.admin.reload")) options.add("reload");
+            if (sender.hasPermission("shcompagnons.admin.preview")) options.add("preview");
+            if (sender.hasPermission("shcompagnons.admin.reload")) {
+                options.add("reload");
+                options.add("models");
+            }
             if (sender.hasPermission("shcompagnons.admin")) options.add("help");
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("preview")) {
+            if (sender.hasPermission("shcompagnons.admin.preview")) {
+                options.addAll(plugin.getConfigManager().getPetTypes());
+            }
         } else if (args.length == 2) {
             String subCommand = args[0].toLowerCase();
             if (subCommand.equals("set") || subCommand.equals("unset")) {
@@ -231,10 +308,7 @@ public class CompagnonCommand implements CommandExecutor, TabCompleter {
         } else if (args.length == 3) {
             if (args[0].equalsIgnoreCase("set")) {
                 if (sender.hasPermission("shcompagnons.admin.set")) {
-                    Set<String> petTypes = plugin.getConfigManager().getPetTypes();
-                    if (petTypes != null) {
-                        options.addAll(petTypes);
-                    }
+                    options.addAll(plugin.getConfigManager().getPetTypes());
                 }
             }
         }

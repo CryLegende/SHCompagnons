@@ -7,6 +7,10 @@
 #   {types_list} - liste des types disponibles
 #   {command_label} - alias de commande utilisé (shc, compagnons)
 #   {plugin_version} - version du plugin
+#   {seconds} - durée d'un aperçu (secondes)
+#   {pets} / {models} - nombre de compagnons / de modèles chargés
+#   {count} - nombre de modèles importés
+#   {model} {parts} {x} {y} {z} - nom, nombre d'entités et taille (blocs) d'un modèle importé
 # Un message vide ("") n'est pas envoyé.
 
 # Préfixe ajouté devant les messages (vide : aucun)
@@ -24,6 +28,11 @@ admin_no_permission_command: "&8&l« &f&lSH &8&l» &fCommande inconnue, essayer 
 admin_no_permission_subcommand: "&8&l« &f&lSH &8&l» &fCommande inconnue, essayer autre chose."
 admin_usage_set: "{prefix}&cUsage: /{command_label} set <joueur> <type_pet>"
 admin_usage_unset: "{prefix}&cUsage: /{command_label} unset <joueur>"
+admin_usage_preview: "{prefix}&cUsage (en jeu) : /{command_label} preview <type_pet> [secondes]"
+admin_preview_start: "{prefix}&7Aperçu de {pet_display_name}&7 pendant &f{seconds} s&7, rien n'est enregistré."
+admin_models_empty: "{prefix}&7Aucun modèle dans &fplugins/SHCompagnons/models/&7."
+admin_models_header: "{prefix}&7{count} modèle(s) importé(s) :"
+admin_models_line: " &8• &f{model} &7: {parts} entités, {x} x {y} x {z} blocs"
 admin_player_not_online: "{prefix}&cLe joueur '{player}' n'est pas en ligne ou n'existe pas."
 admin_pet_type_not_exists: "{prefix}&cLe type de compagnon '{pet_type_key}' n'existe pas."
 admin_available_types_info: "&7Types disponibles: {types_list}"
@@ -31,12 +40,14 @@ admin_pet_set_success: "{prefix}&aLe compagnon {pet_display_name}&a a été déf
 admin_player_no_pet_to_unset: "{prefix}&e{player} n'a pas de compagnon actif ou enregistré à retirer."
 admin_pet_unset_success: "{prefix}&aLe compagnon de {player} a été retiré (s'il en avait un)."
 admin_reload_start: "{prefix}&eRechargement de la configuration de SHCompagnons..."
-admin_reload_success: "{prefix}&aLa configuration de SHCompagnons a été rechargée !"
+admin_reload_success: "{prefix}&aSHCompagnons rechargé : {pets} compagnons, {models} modèles."
 admin_unknown_command_no_help_permission: "{prefix}&cCommande inconnue. Vous n'avez pas non plus la permission pour voir l'aide."
 
 # Aide (/shcompagnons help)
 help_header: "&b--- Aide SHCompagnons (v{plugin_version}) ---"
 help_set: "&6/{command_label} set <joueur> <type_pet> &7- Définit un compagnon."
 help_unset: "&6/{command_label} unset <joueur> &7- Retire le compagnon."
-help_reload: "&6/{command_label} reload &7- Recharge la configuration."
+help_preview: "&6/{command_label} preview <type_pet> [secondes] &7- Essaie un compagnon sur soi."
+help_models: "&6/{command_label} models &7- Liste les modèles importés."
+help_reload: "&6/{command_label} reload &7- Recharge la configuration et les modèles."
 help_footer: "&6/{command_label} help &7- Affiche ce message d'aide."

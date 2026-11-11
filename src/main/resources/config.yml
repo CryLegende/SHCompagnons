@@ -1,13 +1,31 @@
-# SHCompagnons : compagnons visuels (têtes de joueur portées par un porte-armure invisible, en paquets) qui suivent
-# leur propriétaire. Le compagnon choisi est enregistré en base et recréé à chaque connexion.
+# SHCompagnons : compagnons qui accompagnent leur propriétaire. Chaque compagnon est un modèle d'entités
+# d'affichage (item_display, block_display, text_display) qui n'existe que chez les joueurs, envoyé en paquets :
+# aucune entité côté serveur. Le client déplace le modèle avec le joueur et anime les transitions lui-même ; le
+# serveur n'envoie que l'orientation quand le joueur tourne la tête, les images clés des animations et les
+# changements de texture. Le compagnon choisi est enregistré en base et recréé à chaque connexion.
 #
 # Commandes (alias /shc, /compagnons) :
-#   /shcompagnons set <joueur> <type>   donne un compagnon à un joueur      shcompagnons.admin.set
-#   /shcompagnons unset <joueur>         retire le compagnon d'un joueur    shcompagnons.admin.unset
-#   /shcompagnons reload                 recharge config.yml et messages.yml  shcompagnons.admin.reload
-#   /shcompagnons help                   aide                                 shcompagnons.admin
+#   /shcompagnons set <joueur> <type>              donne un compagnon à un joueur              shcompagnons.admin.set
+#   /shcompagnons unset <joueur>                   retire le compagnon d'un joueur             shcompagnons.admin.unset
+#   /shcompagnons preview <type> [secondes]        essaie un compagnon sur soi (30 s par défaut),
+#                                                  sans rien enregistrer                       shcompagnons.admin.preview
+#   /shcompagnons models                           liste les modèles importés et leur taille   shcompagnons.admin.reload
+#   /shcompagnons reload                           recharge config.yml, messages.yml, models/  shcompagnons.admin.reload
+#   /shcompagnons help                             aide                                        shcompagnons.admin
 #
+# Placeholders : %shcompagnons_current_pet_type%, %shcompagnons_current_pet_displayname%.
 # Messages : messages.yml.
+#
+# Importer un modèle de block-display.com (ou de BDEngine) :
+#   1. Sur la page du modèle, « Get the command », copier la ou les commandes /summon.
+#   2. Les coller dans plugins/SHCompagnons/models/<nom>.txt (une commande par ligne). Un fichier .yml de
+#      BlockDisplayCreator (display.spawn-command) se dépose aussi tel quel.
+#   3. Ajouter un compagnon avec « model: <nom> » et régler placement.scale (la taille d'origine du modèle est
+#      donnée par /shcompagnons models), puis /shcompagnons reload et /shcompagnons preview <type>.
+#   Le modèle est recentré automatiquement : placement.offset désigne la position de son centre.
+#
+# Repère du placement : origine au sommet de la hitbox du joueur (1,8 bloc debout, plus bas accroupi, en nage ou
+# en élytre), x vers la gauche du joueur, y vers le haut, z vers l'avant. Le modèle tourne avec le regard du joueur.
 
 # Avec SHNetwork, /shcompagnons set et unset atteignent un joueur connecté sur un autre serveur du réseau : son serveur
 # lui donne ou lui retire le compagnon et le prévient. Les serveurs doivent partager la même base (database ci-dessous)
@@ -29,39 +47,61 @@ database:
     # Propriétés passées à HikariCP
     properties:
       autoReconnect: true
-    #   cachePrepStmts: true
-    #   prepStmtCacheSize: 250
-    #   prepStmtCacheSqlLimit: 2048
-    #   useServerPrepStmts: true
-    #   useLocalSessionState: true
-    #   rewriteBatchedStatements: true
-    #   cacheResultSetMetadata: true
-    #   cacheServerConfiguration: true
-    #   elideSetAutoCommits: true
-    #   maintainTimeStats: false
 
-# Placement et mouvement des compagnons
+# Réglages communs à tous les compagnons. placement et follow peuvent être redéfinis par compagnon.
 companion_settings:
-  # Hauteur du porte-armure par rapport aux pieds du joueur (blocs)
-  armorstand_base_vertical_offset: 0.6
-  # Pose du bras droit qui tient la tête (degrés)
-  right_arm_pose_degrees:
-    x: -45
-    y: 45
-    z: 0
+  # Position du compagnon par défaut (repère décrit en haut du fichier)
+  placement:
+    # Décalage du centre du modèle (blocs)
+    offset:
+      x: 0.887
+      y: -0.17
+      z: -0.275
+    # Rotation du modèle sur lui-même (degrés) : y tourne autour de la verticale, x penche en avant, z sur le côté
+    rotation:
+      y: -10
+    # Échelle (1 = taille d'origine ; une tête seule fait 0,5 bloc de côté à 1)
+    scale: 0.5
 
-  # Orientation du compagnon par rapport au regard du joueur (degrés)
-  # 0 = même direction, 90 = vers la droite, -90 = vers la gauche, 180 = face au joueur
-  armorstand_yaw_offset_degrees: 190.0
+  # ATTACHED : passager du joueur, le client le déplace avec lui à chaque image (aucun paquet de position).
+  # FREE : flotte et rattrape le joueur avec un temps de retard (un paquet de position par mise à jour).
+  follow: ATTACHED
 
-  # Part de l'écart rattrapée à chaque tick (1 = colle au joueur)
-  follow_speed: 1
-  # Au-delà de cette distance au carré (blocs²), le compagnon est téléporté au lieu de glisser
-  max_distance_before_teleport_squared: 225
+  # Mode FREE
+  free_follow:
+    # Ticks entre deux positions envoyées ; le client lisse le trajet entre elles
+    update_ticks: 2
+    # Part de la distance rattrapée à chaque mise à jour (0,01 à 1)
+    catch_up: 0.35
+    # Au-delà de cette distance (blocs), le compagnon rejoint le joueur directement
+    teleport_distance: 16
 
-# Configuration des pets
-# Vous pouvez ajouter autant de pets que vous voulez ici.
-# La clé (ex: ghast, creeper) sera utilisée dans la commande /shcompagnons set <joueur> <clé>
+  # Orientation : envoyée quand le joueur a tourné la tête d'au moins threshold_degrees, au plus une fois tous les
+  # min_interval_ticks, et lissée par le client sur smoothing_ticks
+  turn:
+    threshold_degrees: 2
+    min_interval_ticks: 2
+    smoothing_ticks: 3
+
+  # Le propriétaire voit son propre compagnon
+  show_to_owner: true
+
+  # Délai avant d'afficher le compagnon d'un joueur qui se connecte (ticks)
+  join_delay_ticks: 20
+
+# Compagnons. La clé (ex : ghast) est celle de /shcompagnons set <joueur> <clé>.
+#
+#   displayname           nom affiché (codes couleur &)
+#   skin                  texture d'une tête de joueur (valeur base64), compagnon = cette tête
+#   skins                 plusieurs textures affichées tour à tour : liste de textures, ou de « value » + « skin_update_interval »
+#   skin_update_interval  durée d'affichage de chaque texture (ticks), pour toute la liste
+#   model                 modèle importé (fichier models/<nom>.txt), à la place d'une tête
+#   animation             NONE, BOUNCING (rebond), GLIDE (montée et descente lentes), WOBBLE_SIDE (balancement),
+#                         GLIDE_WOBBLE (les deux), SPIN (tour sur lui-même)
+#   animation_speed       vitesse de l'animation (1 = normale, 2 = deux fois plus rapide)
+#   animation_amplitude   ampleur des mouvements de l'animation (1 = normale)
+#   follow                ATTACHED ou FREE (voir companion_settings)
+#   placement             offset, rotation, scale (voir companion_settings), seules les clés données changent
 pets:
   ghast:
     displayname: "Ghast"
