@@ -43,6 +43,8 @@ public class ConfigManager {
         float turnThreshold,
         int turnInterval,
         int turnSmoothing,
+        int turnPartsPerTick,
+        int maxModelParts,
         boolean showToOwner,
         int joinDelayTicks
     ) {
@@ -56,6 +58,8 @@ public class ConfigManager {
     private final SHCompagnons plugin;
     private FileConfiguration config;
     private final Map<String, PetType> petTypes = new LinkedHashMap<>();
+    // Clés de la section pets, chargées ou non (modèle absent, trop lourd, illisible...)
+    private final Set<String> declaredPets = new java.util.HashSet<>();
     private ModelLibrary models = new ModelLibrary();
     private Settings settings;
 
@@ -120,6 +124,7 @@ public class ConfigManager {
         plugin.reloadConfig();
         this.config = plugin.getConfig();
         petTypes.clear();
+        declaredPets.clear();
         messages.clear();
 
         this.storageType = config.getString("database.type", "SQLITE").toUpperCase(Locale.ROOT);
@@ -139,6 +144,7 @@ public class ConfigManager {
 
         this.settings = readSettings(config.getConfigurationSection("companion_settings"));
         loadMessages();
+        plugin.saveBundledModels();
         this.models = ModelLibrary.load(new File(plugin.getDataFolder(), "models"), plugin.getLogger());
         loadPets();
     }
@@ -162,6 +168,8 @@ public class ConfigManager {
             (float) Math.max(0.5, section.getDouble("turn.threshold_degrees", 2.0)),
             Math.max(1, section.getInt("turn.min_interval_ticks", 2)),
             Math.max(0, section.getInt("turn.smoothing_ticks", 3)),
+            Math.max(1, section.getInt("turn.max_parts_per_tick", 4)),
+            Math.max(1, section.getInt("max_model_parts", 12)),
             section.getBoolean("show_to_owner", true),
             Math.max(1, section.getInt("join_delay_ticks", 20)));
     }
@@ -215,6 +223,7 @@ public class ConfigManager {
         }
         Map<String, com.github.retrooper.packetevents.protocol.item.ItemStack> heads = new HashMap<>();
         for (String key : petsSection.getKeys(false)) {
+            declaredPets.add(key.toLowerCase(Locale.ROOT));
             ConfigurationSection section = petsSection.getConfigurationSection(key);
             if (section == null) {
                 plugin.getLogger().warning("Compagnon '" + key + "' : section invalide, ignoré.");
@@ -255,6 +264,11 @@ public class ConfigManager {
             ModelLibrary.Model model = models.get(modelName);
             if (model == null) {
                 plugin.getLogger().warning("Compagnon '" + key + "' : modèle '" + modelName + "' introuvable dans models/, compagnon ignoré.");
+                return null;
+            }
+            if (model.parts().size() > settings.maxModelParts()) {
+                plugin.getLogger().warning("Compagnon '" + key + "' : le modèle '" + modelName + "' a " + model.parts().size()
+                    + " entités, plus que companion_settings.max_model_parts (" + settings.maxModelParts() + "), compagnon ignoré.");
                 return null;
             }
             return new PetType(key, displayName, model.parts(), List.of(), placement, animation, speed, amplitude, follow);
@@ -411,6 +425,14 @@ public class ConfigManager {
     @Nullable
     public PetType getPetType(@NotNull String key) {
         return petTypes.get(key.toLowerCase(Locale.ROOT));
+    }
+
+    /**
+     * Ce compagnon est-il écrit dans la section pets, même s'il n'a pas pu être chargé (modèle absent, trop lourd
+     * ou illisible) ? Le choix d'un joueur n'est alors pas effacé de la base : il revient dès que le modèle est réparé.
+     */
+    public boolean isDeclared(@NotNull String key) {
+        return declaredPets.contains(key.toLowerCase(Locale.ROOT));
     }
 
     @NotNull

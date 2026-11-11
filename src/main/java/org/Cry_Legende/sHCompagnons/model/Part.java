@@ -17,6 +17,7 @@ import org.bukkit.inventory.meta.SkullMeta;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -186,8 +187,8 @@ public final class Part {
     }
 
     private static BlockData blockData(Snbt.Compound state) {
-        StringBuilder text = new StringBuilder(state.string("Name"));
-        Snbt.Compound properties = state.compound("Properties");
+        StringBuilder text = new StringBuilder(SummonImporter.blockName(state));
+        Snbt.Compound properties = SummonImporter.blockProperties(state);
         if (properties != null && !properties.isEmpty()) {
             text.append('[');
             boolean first = true;
@@ -221,7 +222,15 @@ public final class Part {
                 first = false;
             }
             text.append(']');
-            return Bukkit.getItemFactory().createItemStack(text.toString());
+            ItemStack stack = Bukkit.getItemFactory().createItemStack(text.toString());
+            if (stack.getType() == Material.PLAYER_HEAD && stack.getItemMeta() instanceof SkullMeta meta && meta.getPlayerProfile() != null) {
+                for (ProfileProperty property : meta.getPlayerProfile().getProperties()) {
+                    if (property.getName().equals("textures")) {
+                        return head(property.getValue());
+                    }
+                }
+            }
+            return stack;
         }
         Snbt.Compound tag = item.compound("tag");
         Snbt.Compound owner = tag == null ? null : tag.compound("SkullOwner");
@@ -241,6 +250,7 @@ public final class Part {
 
     /** Tête de joueur portant cette texture (valeur base64 de la propriété « textures »). */
     public static ItemStack head(String texture) {
+        texture = compactTexture(texture);
         ItemStack item = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) item.getItemMeta();
         PlayerProfile profile = Bukkit.createProfile(UUID.nameUUIDFromBytes(texture.getBytes(StandardCharsets.UTF_8)), "SHCompagnon");
@@ -248,6 +258,27 @@ public final class Part {
         meta.setPlayerProfile(profile);
         item.setItemMeta(meta);
         return item;
+    }
+
+    /**
+     * Texture réduite à l'adresse de l'image. Les têtes exportées par block-display.com portent aussi l'horodatage,
+     * le profil d'origine et parfois le modèle de bras : trois fois plus d'octets envoyés à chaque joueur qui voit
+     * le compagnon, pour une image identique. Une valeur illisible est gardée telle quelle.
+     */
+    static String compactTexture(String value) {
+        try {
+            String json = new String(Base64.getMimeDecoder().decode(value.trim()), StandardCharsets.UTF_8);
+            int host = json.indexOf("textures.minecraft.net/texture/");
+            int start = host < 0 ? -1 : json.lastIndexOf('"', host);
+            int end = host < 0 ? -1 : json.indexOf('"', host);
+            if (start < 0 || end < 0) {
+                return value;
+            }
+            String compact = "{\"textures\":{\"SKIN\":{\"url\":\"" + json.substring(start + 1, end) + "\"}}}";
+            return Base64.getEncoder().encodeToString(compact.getBytes(StandardCharsets.UTF_8));
+        } catch (IllegalArgumentException e) {
+            return value;
+        }
     }
 
     /** Texte d'un text_display : JSON (entre guillemets dans la commande) ou composant SNBT (1.21.5 et plus). */

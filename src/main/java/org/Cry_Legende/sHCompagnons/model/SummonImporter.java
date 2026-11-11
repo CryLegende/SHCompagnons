@@ -169,8 +169,7 @@ public final class SummonImporter {
     private static boolean renders(String type, Snbt.Compound entity) {
         switch (type) {
             case "block_display": {
-                Snbt.Compound state = entity.compound("block_state");
-                String name = state == null ? null : state.string("Name");
+                String name = blockName(entity.compound("block_state"));
                 return name != null && !name.endsWith("air");
             }
             case "item_display": {
@@ -181,6 +180,23 @@ public final class SummonImporter {
             default:
                 return entity.containsKey("text");
         }
+    }
+
+    /**
+     * Nom du bloc d'un block_state : clé « Name » jusqu'à la 26.2, « id » dans les commandes exportées pour la 26.3.
+     */
+    public static String blockName(Snbt.Compound state) {
+        if (state == null) {
+            return null;
+        }
+        String name = state.string("Name");
+        return name != null ? name : state.string("id");
+    }
+
+    /** Propriétés d'un block_state : « Properties » ou « properties » selon la version de la commande. */
+    public static Snbt.Compound blockProperties(Snbt.Compound state) {
+        Snbt.Compound properties = state.compound("Properties");
+        return properties != null ? properties : state.compound("properties");
     }
 
     static Affine transformation(Snbt.Compound entity) {

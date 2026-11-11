@@ -12,12 +12,12 @@ public enum Animation {
     NONE(0, 0),
     /** Rebond vertical rapide (22 ticks). */
     BOUNCING(22, 0),
-    /** Montée et descente lentes (70 ticks). */
-    GLIDE(70, 5),
+    /** Montée et descente lentes (70 ticks, 8 images clés). */
+    GLIDE(70, 8.75),
     /** GLIDE avec un balancement de côté. */
-    GLIDE_WOBBLE(630, 5),
-    /** Balancement de côté (126 ticks). */
-    WOBBLE_SIDE(126, 7),
+    GLIDE_WOBBLE(630, 10),
+    /** Balancement de côté (126 ticks, 8 images clés). */
+    WOBBLE_SIDE(126, 15.75),
     /** Tour complet sur lui-même (80 ticks). */
     SPIN(80, 8);
 
@@ -26,14 +26,19 @@ public enum Animation {
         public static final Frame REST = new Frame(new Vector3f(), 0);
     }
 
-    // Rebond : hauteur toutes les 2 ticks, et les instants gardés comme images clés (le reste est en ligne droite)
+    // Rebond : hauteur toutes les 2 ticks, et les instants gardés comme images clés (le reste est en ligne droite).
+    // Quatre images clés par rebond : départ, fin de la montée rapide, sommet, début de la chute. Chaque image clé
+    // coûte un paquet par pièce et par joueur qui voit le compagnon ; l'écart avec la courbe complète (0,07 bloc au
+    // plus, pendant 2 ticks) ne se voit pas.
     private static final float[] BOUNCE = {-0.3f, -0.15f, 0.1f, 0.2f, 0.25f, 0.3f, 0.3f, 0.25f, 0.2f, 0.1f, -0.15f};
-    private static final int[] BOUNCE_KEYS = {0, 2, 4, 6, 10, 12, 16, 18, 20};
+    private static final int[] BOUNCE_KEYS = {0, 6, 11, 16};
 
     private final int cycle;
-    private final int step;
+    // Ticks entre deux images clés (hors rebond) : assez large pour peu de paquets, assez serré pour que les
+    // segments droits suivent la courbe (écart inférieur à 0,03 bloc)
+    private final double step;
 
-    Animation(int cycle, int step) {
+    Animation(int cycle, double step) {
         this.cycle = cycle;
         this.step = step;
     }

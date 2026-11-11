@@ -101,6 +101,10 @@ public class PetManager {
                 return;
             }
             PetType type = plugin.getConfigManager().getPetType(key);
+            if (type == null && plugin.getConfigManager().isDeclared(key)) {
+                plugin.getLogger().warning("Compagnon '" + key + "' de " + player.getName() + " indisponible (voir les avertissements du chargement) : gardé en base, non affiché.");
+                return;
+            }
             if (type == null) {
                 plugin.getLogger().warning("Compagnon '" + key + "' de " + player.getName() + " absent de config.yml : retiré de la base.");
                 plugin.getDatabaseManager().removePlayerPet(player.getUniqueId());

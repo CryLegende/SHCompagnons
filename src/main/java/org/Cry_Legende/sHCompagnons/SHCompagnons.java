@@ -98,6 +98,23 @@ public class SHCompagnons extends JavaPlugin {
         }
     }
 
+    /**
+     * Copie dans plugins/SHCompagnons/models/ les modèles fournis dans le jar (dossier models/) qui n'y sont pas
+     * encore : la configuration par défaut les utilise. Un fichier déjà présent n'est jamais remplacé.
+     */
+    public void saveBundledModels() {
+        try (java.util.jar.JarFile jar = new java.util.jar.JarFile(getFile())) {
+            for (java.util.Enumeration<java.util.jar.JarEntry> entries = jar.entries(); entries.hasMoreElements(); ) {
+                String name = entries.nextElement().getName();
+                if (name.startsWith("models/") && name.endsWith(".txt") && !new File(getDataFolder(), name).exists()) {
+                    saveResource(name, false);
+                }
+            }
+        } catch (java.io.IOException | RuntimeException e) {
+            getLogger().log(Level.WARNING, "Modèles fournis non copiés : " + e.getMessage());
+        }
+    }
+
     private boolean setupDatabase() {
         String storageType = getConfigManager().getStorageType();
         if (!getDataFolder().exists() && !getDataFolder().mkdirs()) {

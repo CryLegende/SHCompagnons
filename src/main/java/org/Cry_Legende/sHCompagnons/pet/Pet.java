@@ -65,6 +65,9 @@ public final class Pet {
     // Numéro d'entité du propriétaire sous lequel le compagnon est rangé (il change à la réapparition)
     private volatile int ownerEntityId;
 
+    // Cadence et lissage de l'orientation : ceux de la config, ralentis pour un modèle de beaucoup de pièces
+    private final int turnInterval;
+    private final int turnSmoothing;
     private float sentYaw;
     private int nextTurnTick;
 
@@ -97,6 +100,11 @@ public final class Pet {
             ids[i] = Packets.newEntityId();
             uuids[i] = UUID.randomUUID();
         }
+        // Tourner coûte un paquet par pièce : au-delà de turnPartsPerTick pièces par tick, l'orientation est envoyée
+        // moins souvent et lissée plus longtemps par le client (le compagnon suit avec un peu plus d'inertie)
+        int budget = settings.turnPartsPerTick();
+        this.turnInterval = Math.max(settings.turnInterval(), (count + budget - 1) / budget);
+        this.turnSmoothing = turnInterval > settings.turnInterval() ? Math.max(settings.turnSmoothing(), turnInterval + 1) : settings.turnSmoothing();
         this.ownerEntityId = owner.getEntityId();
         this.sentYaw = owner.getYaw();
         this.freeYaw = sentYaw;
@@ -312,7 +320,7 @@ public final class Pet {
         if (index == 0 && type.cyclesSkins()) {
             data.add(new EntityData<>(Part.ITEM, EntityDataTypes.ITEMSTACK, type.skins().get(skinIndex).item()));
         }
-        data.add(new EntityData<>(Part.POS_ROT_DURATION, EntityDataTypes.INT, attached ? settings.turnSmoothing() : settings.freeUpdateTicks()));
+        data.add(new EntityData<>(Part.POS_ROT_DURATION, EntityDataTypes.INT, attached ? turnSmoothing : settings.freeUpdateTicks()));
         Affine affine = placed(part, frame);
         data.add(new EntityData<>(Part.TRANSLATION, EntityDataTypes.VECTOR3F, vector(affine.translation())));
         data.add(new EntityData<>(Part.LEFT_ROTATION, EntityDataTypes.QUATERNION, quaternion(affine.left())));
@@ -342,7 +350,7 @@ public final class Pet {
             return;
         }
         sentYaw = yaw;
-        nextTurnTick = now + settings.turnInterval();
+        nextTurnTick = now + turnInterval;
         for (Player viewer : shown.values()) {
             List<PacketWrapper<?>> packets = new ArrayList<>(ids.length);
             for (int id : ids) {
