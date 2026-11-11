@@ -8,6 +8,7 @@ import org.Cry_Legende.sHCompagnons.pet.Animation;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
@@ -75,6 +76,44 @@ public class ConfigManager {
     public ConfigManager(@NotNull SHCompagnons plugin) {
         this.plugin = plugin;
         plugin.saveDefaultConfig();
+    }
+
+    /** Fichier de configuration refusé par {@link #validate()} (file null : aucun compagnon défini) et cause. */
+    public record Problem(@Nullable String file, @NotNull String reason) {
+    }
+
+    /**
+     * Lit config.yml et messages.yml en mode strict, sans rien remplacer. Rend le fichier invalide et la cause, ou
+     * null si tout se lit. Refuse aussi un config.yml sans aucun compagnon dans « pets » quand des compagnons sont
+     * chargés : un reload ne doit pas retirer le compagnon de tous les joueurs en ligne.
+     */
+    @Nullable
+    public Problem validate() {
+        YamlConfiguration parsedConfig = null;
+        for (String name : new String[] {"config.yml", "messages.yml"}) {
+            File file = new File(plugin.getDataFolder(), name);
+            if (!file.exists()) {
+                continue;
+            }
+            YamlConfiguration yaml = new YamlConfiguration();
+            try {
+                yaml.load(file);
+            } catch (IOException | InvalidConfigurationException e) {
+                Throwable cause = e.getCause() != null ? e.getCause() : e;
+                String text = String.valueOf(cause.getMessage()).replaceAll("\\s+", " ").trim();
+                return new Problem(name, text.length() > 200 ? text.substring(0, 200) + "..." : text);
+            }
+            if (name.equals("config.yml")) {
+                parsedConfig = yaml;
+            }
+        }
+        if (parsedConfig != null && !petTypes.isEmpty()) {
+            ConfigurationSection pets = parsedConfig.getConfigurationSection("pets");
+            if (pets == null || pets.getKeys(false).isEmpty()) {
+                return new Problem(null, "config.yml : aucun compagnon dans la section pets");
+            }
+        }
+        return null;
     }
 
     public void loadConfig() {

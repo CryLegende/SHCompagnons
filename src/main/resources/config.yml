@@ -11,7 +11,14 @@
 #                                                  sans rien enregistrer                       shcompagnons.admin.preview
 #   /shcompagnons models                           liste les modèles importés et leur taille   shcompagnons.admin.reload
 #   /shcompagnons reload                           recharge config.yml, messages.yml, models/  shcompagnons.admin.reload
-#   /shcompagnons help                             aide                                        shcompagnons.admin
+#   /shcompagnons info <joueur>                    compagnon enregistré en base pour un joueur shcompagnons.admin.info
+#   Sans argument, /shcompagnons affiche les sous-commandes que vous pouvez utiliser. Tout marche depuis la console
+#   sauf preview. shcompagnons.admin donne toutes les sous-commandes.
+#
+# reload : si config.yml ou messages.yml est invalide, ou si config.yml ne définit plus aucun compagnon, rien n'est
+# remplacé et le message donne le fichier et l'erreur. Le compagnon d'un joueur dont le type a disparu est retiré de
+# sa vue, mais reste en base (nettoyé à sa prochaine connexion). La base (database) et reseau.actif demandent un
+# redémarrage.
 #
 # Placeholders : %shcompagnons_current_pet_type%, %shcompagnons_current_pet_displayname%.
 # Messages : messages.yml.

@@ -181,8 +181,8 @@ public class PetManager {
             if (type != null) {
                 show(player, type);
             } else {
+                // La ligne reste en base : elle est nettoyée à la prochaine connexion, jamais par un reload
                 removeActivePet(player.getUniqueId(), true);
-                plugin.getDatabaseManager().removePlayerPet(player.getUniqueId());
                 plugin.getConfigManager().sendMessage(player, "pet_type_no_longer_available_on_reload");
             }
         }

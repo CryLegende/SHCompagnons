@@ -82,7 +82,7 @@ public class SHCompagnons extends JavaPlugin {
     }
 
     /**
-     * Passe en mode réseau si SHNetwork est installé et 'reseau.actif' est vrai : /shc set et /shc unset atteignent
+     * Passe en mode réseau si SHNetwork est installé et 'reseau.actif' est vrai : /shcompagnons set et /shcompagnons unset atteignent
      * un joueur connecté sur un autre serveur. Le compagnon est déjà en base commune et relu à chaque connexion.
      * La classe qui touche à SHNetwork n'est résolue qu'ici : sans lui, rien n'est chargé.
      */
@@ -91,7 +91,7 @@ public class SHCompagnons extends JavaPlugin {
         if (!getServer().getPluginManager().isPluginEnabled("SHNetwork")) return;
         try {
             remotePlayers = ShNetworkPlayers.open();
-            getLogger().info("SHNetwork détecté : /shc set et /shc unset atteignent les joueurs de tout le réseau.");
+            getLogger().info("SHNetwork détecté : /shcompagnons set et /shcompagnons unset atteignent les joueurs de tout le réseau.");
         } catch (RuntimeException | LinkageError e) {
             remotePlayers = null;
             getLogger().log(Level.SEVERE, "SHNetwork présent mais inutilisable, commandes locales à ce serveur : " + e);

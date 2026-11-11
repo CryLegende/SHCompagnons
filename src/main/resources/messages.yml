@@ -5,7 +5,9 @@
 #   {pet_type_key} - clé du type de compagnon (ex : ghast)
 #   {pet_display_name} - nom affiché du compagnon
 #   {types_list} - liste des types disponibles
-#   {command_label} - alias de commande utilisé (shc, compagnons)
+#   {command_label} - nom canonique de la commande (shcompagnons)
+#   {subcommands} - sous-commandes permises à l'expéditeur
+#   {file} {error} - fichier refusé par reload et cause
 #   {plugin_version} - version du plugin
 #   {seconds} - durée d'un aperçu (secondes)
 #   {pets} / {models} - nombre de compagnons / de modèles chargés
@@ -41,13 +43,14 @@ admin_player_no_pet_to_unset: "{prefix}&e{player} n'a pas de compagnon actif ou 
 admin_pet_unset_success: "{prefix}&aLe compagnon de {player} a été retiré (s'il en avait un)."
 admin_reload_start: "{prefix}&eRechargement de la configuration de SHCompagnons..."
 admin_reload_success: "{prefix}&aSHCompagnons rechargé : {pets} compagnons, {models} modèles."
-admin_unknown_command_no_help_permission: "{prefix}&cCommande inconnue. Vous n'avez pas non plus la permission pour voir l'aide."
 
-# Aide (/shcompagnons help)
-help_header: "&b--- Aide SHCompagnons (v{plugin_version}) ---"
-help_set: "&6/{command_label} set <joueur> <type_pet> &7- Définit un compagnon."
-help_unset: "&6/{command_label} unset <joueur> &7- Retire le compagnon."
-help_preview: "&6/{command_label} preview <type_pet> [secondes] &7- Essaie un compagnon sur soi."
-help_models: "&6/{command_label} models &7- Liste les modèles importés."
-help_reload: "&6/{command_label} reload &7- Recharge la configuration et les modèles."
-help_footer: "&6/{command_label} help &7- Affiche ce message d'aide."
+# /shcompagnons sans argument ou avec une sous-commande inconnue : une seule ligne, sous-commandes permises
+admin_usage: "{prefix}&7Utilisation : &c/shcompagnons <{subcommands}>"
+admin_usage_info: "{prefix}&cUsage: /{command_label} info <joueur>"
+admin_info_line: "{prefix}&7Compagnon de &f{player}&7 : &f{pet_type_key} &7({pet_display_name}&7)."
+admin_info_none: "{prefix}&e{player} n'a pas de compagnon enregistré."
+admin_info_unknown_type: "{prefix}&e{player} a le compagnon &f{pet_type_key}&e en base, absent de config.yml."
+admin_info_error: "{prefix}&cLecture de la base impossible, voir la console."
+admin_reload_error: "{prefix}&cRechargement refusé ({file} : {error}). La configuration précédente est conservée."
+admin_reload_no_pets: "{prefix}&cRechargement refusé : config.yml ne définit aucun compagnon. La configuration précédente est conservée."
+admin_reload_restart: "{prefix}&7La base de données (&fdatabase&7) et &freseau.actif&7 ne se rechargent qu'au redémarrage."

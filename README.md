@@ -25,7 +25,7 @@ Le serveur n'envoie ensuite que l'orientation quand le joueur tourne la tête (l
 
 Les listes de passagers envoyées par le serveur ou par UnlimitedNametags gardent le compagnon (écouteur `SET_PASSENGERS` en priorité basse, seul paquet écouté).
 
-Le compagnon choisi est enregistré en base (table `player_pets`) et relu à chaque connexion : un joueur le garde d'un serveur à l'autre dès que les serveurs partagent la même base. Avec **SHNetwork** (facultatif), `/shc set` et `/shc unset` atteignent aussi un joueur connecté sur un autre serveur du réseau. Sans SHNetwork, ou avec `reseau.actif: false`, seuls les joueurs du serveur sont atteints.
+Le compagnon choisi est enregistré en base (table `player_pets`) et relu à chaque connexion : un joueur le garde d'un serveur à l'autre dès que les serveurs partagent la même base. Avec **SHNetwork** (facultatif), `/shcompagnons set` et `/shcompagnons unset` atteignent aussi un joueur connecté sur un autre serveur du réseau. Sans SHNetwork, ou avec `reseau.actif: false`, seuls les joueurs du serveur sont atteints.
 
 ## Importer un modèle de block-display.com
 
@@ -60,7 +60,7 @@ Les lignes qui commencent par `#` sont des commentaires. Une ligne `/kill` coll�
 
 ### 3. Vérifier le modèle
 
-`/shc reload` puis `/shc models` :
+`/shcompagnons reload` puis `/shcompagnons models` :
 
 ```text
 « SH » 1 modèle(s) importé(s) :
@@ -87,15 +87,15 @@ Taille en jeu = taille d'origine × `placement.scale`. Pour comparer, une tête 
 
 ### 5. Essayer, régler, donner
 
-1. `/shc reload` puis `/shc preview pierre` : le compagnon s'affiche sur soi pendant 30 s, sans rien enregistrer.
-2. Ajuster `placement` (`scale`, `offset`, `rotation`), puis `/shc reload` et `/shc preview pierre` à nouveau.
-3. `/shc set <joueur> pierre` pour le donner.
+1. `/shcompagnons reload` puis `/shcompagnons preview pierre` : le compagnon s'affiche sur soi pendant 30 s, sans rien enregistrer.
+2. Ajuster `placement` (`scale`, `offset`, `rotation`), puis `/shcompagnons reload` et `/shcompagnons preview pierre` à nouveau.
+3. `/shcompagnons set <joueur> pierre` pour le donner.
 
 ### Bon à savoir
 
 - **Placement** : le modèle est recentré tout seul ; `placement.offset` désigne la position de son centre, dans le repère du joueur décrit en tête de `config.yml`. Le déplacer dans l'aperçu du site ne change rien. Le tourner avant **Get the command** change bien la commande.
 - **Animations** : celles de BDEngine ne sont pas reprises. Seule la pose du modèle compte ; le mouvement du compagnon vient de `animation` (`GLIDE`, `BOUNCING`, `SPIN`…).
-- **Coût** : chaque entité du modèle est envoyée à chaque joueur qui voit le compagnon. Ensuite, chacune reçoit un paquet d'orientation quand le propriétaire tourne la tête. Garder les modèles sous une cinquantaine d'entités (`/shc models` donne le nombre).
+- **Coût** : chaque entité du modèle est envoyée à chaque joueur qui voit le compagnon. Ensuite, chacune reçoit un paquet d'orientation quand le propriétaire tourne la tête. Garder les modèles sous une cinquantaine d'entités (`/shcompagnons models` donne le nombre).
 - **Licence** : elle figure sur la page du modèle. En **BDL BY-NC** (usage non commercial), demander à l'auteur avant de vendre le compagnon en boutique.
 - **Autres sources** : les commandes de BDEngine (bdengine.app, **Export to Minecraft**) se collent de la même façon. Un fichier `.yml` de BlockDisplayCreator (`display.spawn-command`) se dépose tel quel dans `models/`. Un `.mcfunction` avec des lignes `summon` se dépose aussi.
 - **Formats lus** :
@@ -114,11 +114,12 @@ Taille en jeu = taille d'origine × `placement.scale`. Pour comparer, une tête 
 
 | Commande | Description | Permission |
 |---|---|---|
-| `/shc set <joueur> <type>` | Donne un compagnon et l'enregistre. | `shcompagnons.admin.set` |
-| `/shc unset <joueur>` | Retire le compagnon. | `shcompagnons.admin.unset` |
-| `/shc preview <type> [secondes]` | Essaie un compagnon sur soi (30 s), sans rien enregistrer. | `shcompagnons.admin.preview` |
-| `/shc models` | Liste les modèles importés, leur nombre d'entités et leur taille. | `shcompagnons.admin.reload` |
-| `/shc reload` | Recharge `config.yml`, `messages.yml` et `models/`. | `shcompagnons.admin.reload` |
+| `/shcompagnons set <joueur> <type>` | Donne un compagnon et l'enregistre. | `shcompagnons.admin.set` |
+| `/shcompagnons unset <joueur>` | Retire le compagnon. | `shcompagnons.admin.unset` |
+| `/shcompagnons preview <type> [secondes]` | Essaie un compagnon sur soi (30 s), sans rien enregistrer. | `shcompagnons.admin.preview` |
+| `/shcompagnons models` | Liste les modèles importés, leur nombre d'entités et leur taille. | `shcompagnons.admin.reload` |
+| `/shcompagnons reload` | Recharge `config.yml`, `messages.yml` et `models/`. Si un fichier est invalide, ou si `config.yml` ne définit plus aucun compagnon, rien n'est remplacé. La base et `reseau.actif` demandent un redémarrage. | `shcompagnons.admin.reload` |
+| `/shcompagnons info <joueur>` | Compagnon enregistré en base pour un joueur (en ligne ici ou sur un autre serveur, ou UUID). | `shcompagnons.admin.info` |
 
 Alias : `/shcompagnons`, `/compagnons`.
 
