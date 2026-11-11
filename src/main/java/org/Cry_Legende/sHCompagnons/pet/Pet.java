@@ -75,6 +75,18 @@ public final class Pet {
     private int nextKeyframeTick;
     private Animation.Frame frame = Animation.Frame.REST;
 
+    // Repos : le propriétaire n'a ni bougé ni tourné la tête depuis restAfterTicks, l'animation est arrêtée
+    private static final int REST_TRANSITION_TICKS = 15;
+    private final Location probe = new Location(null, 0, 0, 0);
+    private World seenWorld;
+    private double seenX;
+    private double seenY;
+    private double seenZ;
+    private float seenYaw;
+    private float seenPitch;
+    private int lastActiveTick = Integer.MIN_VALUE;
+    private boolean resting;
+
     private int skinIndex;
     private int skinTicksLeft;
 
@@ -234,6 +246,7 @@ public final class Pet {
         if (hidden || removed) {
             return;
         }
+        trackActivity(now);
         if (!pending.isEmpty()) {
             spawnPending();
         }
@@ -245,11 +258,46 @@ public final class Pet {
         } else if (now >= nextFreeTick) {
             followFree(now);
         }
-        if (type.animation().moves() && now >= nextKeyframeTick) {
+        if (!resting && type.animation().moves() && now >= nextKeyframeTick) {
             nextKeyframe(now);
         }
         if (type.cyclesSkins() && skinTicksLeft > 0 && --skinTicksLeft == 0) {
             nextSkin();
+        }
+    }
+
+    /**
+     * Met le compagnon au repos quand son propriétaire est immobile depuis restAfterTicks (ni déplacement, ni
+     * mouvement de tête), et le réveille au premier mouvement. Au repos, le modèle revient doucement à sa position
+     * neutre et plus aucune image clé n'est envoyée : un joueur absent ne coûte plus rien à ceux qui le voient.
+     */
+    private void trackActivity(int now) {
+        owner.getLocation(probe);
+        boolean moved = probe.getWorld() != seenWorld
+            || Math.abs(probe.getX() - seenX) + Math.abs(probe.getY() - seenY) + Math.abs(probe.getZ() - seenZ) > 0.01
+            || Math.abs(probe.getYaw() - seenYaw) + Math.abs(probe.getPitch() - seenPitch) > 1.0f;
+        if (moved || lastActiveTick == Integer.MIN_VALUE) {
+            seenWorld = probe.getWorld();
+            seenX = probe.getX();
+            seenY = probe.getY();
+            seenZ = probe.getZ();
+            seenYaw = probe.getYaw();
+            seenPitch = probe.getPitch();
+            lastActiveTick = now;
+            if (resting) {
+                resting = false;
+                animationTime = 0;
+                nextKeyframeTick = now;
+            }
+            return;
+        }
+        int after = settings.restAfterTicks();
+        if (!resting && after > 0 && type.animation().moves() && now - lastActiveTick >= after) {
+            resting = true;
+            boolean turns = frame.spin() != 0;
+            frame = Animation.Frame.REST;
+            animationTime = 0;
+            sendFrame(REST_TRANSITION_TICKS, turns);
         }
     }
 
@@ -288,8 +336,9 @@ public final class Pet {
                 packets.add(mount);
             }
             packets.add(new WrapperPlayServerBundle());
-            Packets.send(viewer, packets, mount);
+            // Rangé avant la remise du lot : le fil réseau peut le traiter aussitôt
             shown.put(viewer.getUniqueId(), viewer);
+            Packets.send(viewer, packets, mount);
         }
         pending.clear();
     }
@@ -417,6 +466,14 @@ public final class Pet {
         // La rotation n'est renvoyée que si l'animation fait tourner le modèle (SPIN) : 18 octets de moins par pièce
         boolean turns = frame.spin() != previousSpin;
         nextKeyframeTick = now + duration;
+        sendFrame(duration, turns);
+    }
+
+    /** Envoie l'image courante à tous : le client y va depuis la position affichée en « duration » ticks. */
+    private void sendFrame(int duration, boolean turns) {
+        if (shown.isEmpty()) {
+            return;
+        }
         List<Affine> transforms = new ArrayList<>(ids.length);
         for (Part part : type.parts()) {
             transforms.add(placed(part, frame));

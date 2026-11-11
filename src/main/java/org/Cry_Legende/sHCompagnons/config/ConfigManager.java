@@ -45,6 +45,7 @@ public class ConfigManager {
         int turnSmoothing,
         int turnPartsPerTick,
         int maxModelParts,
+        int restAfterTicks,
         boolean showToOwner,
         int joinDelayTicks
     ) {
@@ -170,6 +171,7 @@ public class ConfigManager {
             Math.max(0, section.getInt("turn.smoothing_ticks", 3)),
             Math.max(1, section.getInt("turn.max_parts_per_tick", 4)),
             Math.max(1, section.getInt("max_model_parts", 12)),
+            Math.max(0, section.getInt("rest_after_seconds", 30)) * 20,
             section.getBoolean("show_to_owner", true),
             Math.max(1, section.getInt("join_delay_ticks", 20)));
     }

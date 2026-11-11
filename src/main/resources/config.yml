@@ -126,6 +126,11 @@ companion_settings:
     # envoyée moins souvent et lissée plus longtemps (4 : un modèle de 9 à 12 entités tourne tous les 3 ticks)
     max_parts_per_tick: 4
 
+  # Repos : quand le propriétaire n'a ni bougé ni tourné la tête depuis ce nombre de secondes, son compagnon revient
+  # à sa position neutre et arrête son animation ; il repart au premier mouvement. Un joueur absent ne coûte alors
+  # plus aucun paquet à ceux qui le voient. 0 : jamais de repos.
+  rest_after_seconds: 30
+
   # Nombre maximal d'entités d'un modèle importé ; un compagnon dont le modèle dépasse est refusé au chargement
   max_model_parts: 12
 
