@@ -65,7 +65,7 @@
 # choix des joueurs qui le portent reste en base : il revient dès que le modèle est réparé.
 #
 # Repère du placement : origine au sommet de la hitbox du joueur (1,8 bloc debout, plus bas accroupi, en nage ou
-# en élytre), x vers la gauche du joueur, y vers le haut, z vers l'avant. Le modèle tourne avec le regard du joueur.
+# en élytre), x vers la gauche du joueur, y vers le haut, z vers l'avant. Le modèle tourne avec le regard du joueur, sauf quand il est accroupi.
 
 # Avec SHNetwork, /shcompagnons set et unset atteignent un joueur connecté sur un autre serveur du réseau : son serveur
 # lui donne ou lui retire le compagnon et le prévient. Les serveurs doivent partager la même base (database ci-dessous)
@@ -125,6 +125,12 @@ companion_settings:
     # Tourner coûte un paquet par entité du modèle. Au-delà de ce nombre d'entités par tick, l'orientation est
     # envoyée moins souvent et lissée plus longtemps (4 : un modèle de 9 à 12 entités tourne tous les 3 ticks)
     max_parts_per_tick: 4
+    # Accroupi, le compagnon garde son orientation : le joueur peut se retourner pour le regarder. En mode FREE seule
+    # l'orientation est figée, la position suit toujours. false : le compagnon suit toujours le regard.
+    freeze_when_sneaking: true
+    # Au relevé, le compagnon reprend le regard du joueur en autant de ticks (mode ATTACHED ; en mode FREE il le
+    # rattrape par paliers). 0 : même lissage que d'habitude (smoothing_ticks).
+    resume_smoothing_ticks: 8
 
   # Repos : quand le propriétaire n'a ni bougé ni tourné la tête depuis ce nombre de secondes, son compagnon revient
   # à sa position neutre et arrête son animation ; il repart au premier mouvement. Un joueur absent ne coûte alors
@@ -136,6 +142,11 @@ companion_settings:
 
   # Le propriétaire voit son propre compagnon
   show_to_owner: true
+
+  # Propriétaire invisible (potion, effet WorldGuard, autre plugin) : son compagnon l'est aussi pour tous les autres et
+  # revient avec lui. true : le propriétaire garde son compagnon (comme son propre corps translucide) ; false : il ne
+  # le voit plus non plus. Sans effet si show_to_owner est false.
+  show_to_owner_when_invisible: true
 
   # Délai avant d'afficher le compagnon d'un joueur qui se connecte (ticks)
   join_delay_ticks: 20

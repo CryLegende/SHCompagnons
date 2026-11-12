@@ -23,6 +23,10 @@ Le modèle n'existe que chez les joueurs (entités `item_display`, `block_displa
 
 Le serveur n'envoie ensuite que l'orientation quand le joueur tourne la tête (lissée par le client), les images clés des animations (le client fait le trajet entre deux images) et les changements de texture. Les joueurs qui voient un compagnon sont exactement ceux qui voient son propriétaire (événements de suivi de Paper), plus le propriétaire lui-même : aucun parcours des joueurs à chaque tick.
 
+Un propriétaire **invisible** (potion, effet `give-effects` de WorldGuard, autre plugin) n'est plus vu de personne, et son compagnon non plus : il disparaît de chez les autres joueurs et revient avec le propriétaire. Le propriétaire garde le sien, comme son propre corps translucide (`companion_settings.show_to_owner_when_invisible`). L'invisibilité est lue à chaque tick, un test de drapeau par compagnon. Un propriétaire en vanish que les autres ne peuvent plus suivre n'a déjà plus de compagnon chez eux.
+
+**Accroupi**, le propriétaire fige l'orientation de son compagnon : il peut se retourner pour le regarder. Au relevé, le compagnon reprend son regard en `turn.resume_smoothing_ticks` ticks (`turn.freeze_when_sneaking: false` pour qu'il suive toujours le regard).
+
 Les listes de passagers envoyées par le serveur ou par UnlimitedNametags gardent le compagnon (écouteur `SET_PASSENGERS` en priorité basse, seul paquet écouté).
 
 Le compagnon choisi est enregistré en base (table `player_pets`) et relu à chaque connexion : un joueur le garde d'un serveur à l'autre dès que les serveurs partagent la même base. Avec **SHNetwork** (facultatif), `/shcompagnons set` et `/shcompagnons unset` atteignent aussi un joueur connecté sur un autre serveur du réseau. Sans SHNetwork, ou avec `reseau.actif: false`, seuls les joueurs du serveur sont atteints.

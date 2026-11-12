@@ -27,6 +27,7 @@ import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -42,8 +43,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * l'orientation quand le joueur tourne la tête, les images clés de l'animation et les changements de texture.
  *
  * Les joueurs qui voient le compagnon sont exactement ceux qui voient son propriétaire (événements de suivi de
- * Paper) plus le propriétaire lui-même. Les événements peuvent venir de plusieurs fils : tout passe par le verrou
- * du compagnon, les envois du tick compris.
+ * Paper) plus le propriétaire lui-même. Un propriétaire invisible n'est plus vu de personne : son compagnon
+ * disparaît de chez les autres (et de chez lui si la config le demande) et revient avec lui. Accroupi, le
+ * propriétaire fige l'orientation de son compagnon. Les événements peuvent venir de plusieurs fils : tout passe par
+ * le verrou du compagnon, les envois du tick compris.
  */
 public final class Pet {
 
@@ -62,6 +65,8 @@ public final class Pet {
     private final Map<UUID, Player> pending = new ConcurrentHashMap<>();
     private boolean hidden;
     private boolean removed;
+    // Le propriétaire est invisible (potion, WorldGuard, setInvisible...) : le modèle ne reste que chez lui, si la config le veut
+    private boolean invisible;
     // Numéro d'entité du propriétaire sous lequel le compagnon est rangé (il change à la réapparition)
     private volatile int ownerEntityId;
 
@@ -70,6 +75,9 @@ public final class Pet {
     private final int turnSmoothing;
     private float sentYaw;
     private int nextTurnTick;
+    // Propriétaire accroupi : orientation figée. Au relevé, le client rattrape le regard plus lentement, puis le lissage normal revient
+    private boolean frozen;
+    private int smoothingEndsTick;
 
     private double animationTime;
     private int nextKeyframeTick;
@@ -155,23 +163,35 @@ public final class Pet {
     /** Premier affichage : tous ceux qui voient déjà le propriétaire, et lui-même. */
     public synchronized void start() {
         hidden = owner.getGameMode() == GameMode.SPECTATOR || owner.isDead();
+        invisible = owner.isInvisible();
         if (!hidden) {
             queueEveryone();
         }
     }
 
+    /** Ce joueur doit-il avoir le modèle chez lui ? Le propriétaire invisible n'est vu que de lui-même, si la config le veut. */
+    private boolean mayShowTo(UUID viewer) {
+        if (viewer.equals(owner.getUniqueId())) {
+            return settings.showToOwner() && (!invisible || settings.showToOwnerWhenInvisible());
+        }
+        return !invisible;
+    }
+
+    /** Met en attente ceux qui doivent voir le modèle et ne l'ont pas encore. */
     private void queueEveryone() {
         for (Player viewer : owner.getTrackedBy()) {
-            pending.put(viewer.getUniqueId(), viewer);
+            if (mayShowTo(viewer.getUniqueId()) && !shown.containsKey(viewer.getUniqueId())) {
+                pending.put(viewer.getUniqueId(), viewer);
+            }
         }
-        if (settings.showToOwner()) {
+        if (mayShowTo(owner.getUniqueId()) && !shown.containsKey(owner.getUniqueId())) {
             pending.put(owner.getUniqueId(), owner);
         }
     }
 
     /** Ce joueur commence à voir le propriétaire : le modèle suivra au prochain tick. */
     public synchronized void track(Player viewer) {
-        if (!hidden && !removed && !shown.containsKey(viewer.getUniqueId())) {
+        if (!hidden && !removed && mayShowTo(viewer.getUniqueId()) && !shown.containsKey(viewer.getUniqueId())) {
             pending.put(viewer.getUniqueId(), viewer);
         }
     }
@@ -196,7 +216,7 @@ public final class Pet {
      */
     public synchronized void resendToOwner() {
         shown.remove(owner.getUniqueId());
-        if (!hidden && !removed && settings.showToOwner()) {
+        if (!hidden && !removed && mayShowTo(owner.getUniqueId())) {
             pending.put(owner.getUniqueId(), owner);
         }
     }
@@ -214,7 +234,29 @@ public final class Pet {
             return;
         }
         hidden = false;
+        invisible = owner.isInvisible();
         queueEveryone();
+    }
+
+    /**
+     * Le propriétaire devient invisible ou visible : le modèle est retiré de chez ceux qui ne doivent plus le voir,
+     * ou renvoyé à ceux qui le revoient. L'invisibilité est lue à chaque tick (un seul test de drapeau), ce qui
+     * couvre potion, WorldGuard et setInvisible d'un autre plugin ; l'événement de potion arrive avant l'effet et
+     * setInvisible n'en envoie aucun.
+     */
+    private void applyInvisibility() {
+        if (!invisible) {
+            queueEveryone();
+            return;
+        }
+        pending.keySet().removeIf(viewer -> !mayShowTo(viewer));
+        for (Iterator<Player> it = shown.values().iterator(); it.hasNext(); ) {
+            Player viewer = it.next();
+            if (!mayShowTo(viewer.getUniqueId())) {
+                it.remove();
+                Packets.send(viewer, List.of(new WrapperPlayServerDestroyEntities(ids)));
+            }
+        }
     }
 
     /**
@@ -245,6 +287,11 @@ public final class Pet {
     public synchronized void tick(int now) {
         if (hidden || removed) {
             return;
+        }
+        boolean invisibleNow = owner.isInvisible();
+        if (invisibleNow != invisible) {
+            invisible = invisibleNow;
+            applyInvisibility();
         }
         trackActivity(now);
         if (!pending.isEmpty()) {
@@ -389,21 +436,59 @@ public final class Pet {
         return part.transform().placed(offset, rotation, placement.scale());
     }
 
-    /** ATTACHED : nouvelle orientation quand le joueur a assez tourné la tête, lissée par le client. */
+    /**
+     * ATTACHED : nouvelle orientation quand le joueur a assez tourné la tête, lissée par le client. Accroupi, rien
+     * n'est envoyé (le client ne fait pas tourner un passager avec son véhicule : le compagnon garde son orientation)
+     * ; au relevé il reprend le regard du joueur en resume_smoothing_ticks, un lissage plus long que d'habitude.
+     */
     private void turn(int now) {
+        if (smoothingEndsTick != 0 && now >= smoothingEndsTick) {
+            smoothingEndsTick = 0;
+            sendSmoothing(turnSmoothing);
+        }
+        if (settings.freezeTurnWhenSneaking() && owner.isSneaking()) {
+            frozen = true;
+            return;
+        }
         if (now < nextTurnTick) {
             return;
         }
         float yaw = owner.getYaw();
+        boolean resuming = frozen;
         if (Math.abs(Location.normalizeYaw(yaw - sentYaw)) < settings.turnThreshold()) {
+            frozen = false;
             return;
         }
+        frozen = false;
         sentYaw = yaw;
         nextTurnTick = now + turnInterval;
+        int resumeSmoothing = Math.max(settings.sneakResumeTicks(), turnSmoothing);
+        boolean slow = resuming && resumeSmoothing > turnSmoothing;
+        for (Player viewer : shown.values()) {
+            List<PacketWrapper<?>> packets = new ArrayList<>(slow ? ids.length * 2 : ids.length);
+            for (int id : ids) {
+                if (slow) {
+                    packets.add(smoothingPacket(id, resumeSmoothing));
+                }
+                packets.add(new WrapperPlayServerEntityRotation(id, yaw, 0.0f, false));
+            }
+            Packets.send(viewer, packets);
+        }
+        if (slow) {
+            smoothingEndsTick = now + resumeSmoothing + 1;
+        }
+    }
+
+    private static PacketWrapper<?> smoothingPacket(int id, int ticks) {
+        return new WrapperPlayServerEntityMetadata(id, List.of(new EntityData<>(Part.POS_ROT_DURATION, EntityDataTypes.INT, ticks)));
+    }
+
+    /** Remet à tous la durée de lissage de l'orientation. */
+    private void sendSmoothing(int ticks) {
         for (Player viewer : shown.values()) {
             List<PacketWrapper<?>> packets = new ArrayList<>(ids.length);
             for (int id : ids) {
-                packets.add(new WrapperPlayServerEntityRotation(id, yaw, 0.0f, false));
+                packets.add(smoothingPacket(id, ticks));
             }
             Packets.send(viewer, packets);
         }
@@ -424,7 +509,10 @@ public final class Pet {
             freeX += dx * k;
             freeY += dy * k;
             freeZ += dz * k;
-            freeYaw = Location.normalizeYaw(freeYaw + Location.normalizeYaw(owner.getYaw() - freeYaw) * k);
+            // Accroupi : la position suit toujours, l'orientation reste figée ; au relevé elle rattrape le regard par paliers
+            if (!(settings.freezeTurnWhenSneaking() && owner.isSneaking())) {
+                freeYaw = Location.normalizeYaw(freeYaw + Location.normalizeYaw(owner.getYaw() - freeYaw) * k);
+            }
         }
         double moved = Math.abs(freeX - lastSentX) + Math.abs(freeY - lastSentY) + Math.abs(freeZ - lastSentZ);
         boolean turned = Math.abs(Location.normalizeYaw(freeYaw - sentYaw)) >= settings.turnThreshold();

@@ -47,6 +47,9 @@ public class ConfigManager {
         int maxModelParts,
         int restAfterTicks,
         boolean showToOwner,
+        boolean showToOwnerWhenInvisible,
+        boolean freezeTurnWhenSneaking,
+        int sneakResumeTicks,
         int joinDelayTicks
     ) {
     }
@@ -173,6 +176,9 @@ public class ConfigManager {
             Math.max(1, section.getInt("max_model_parts", 12)),
             Math.max(0, section.getInt("rest_after_seconds", 30)) * 20,
             section.getBoolean("show_to_owner", true),
+            section.getBoolean("show_to_owner_when_invisible", true),
+            section.getBoolean("turn.freeze_when_sneaking", true),
+            Math.max(0, section.getInt("turn.resume_smoothing_ticks", 8)),
             Math.max(1, section.getInt("join_delay_ticks", 20)));
     }
 
