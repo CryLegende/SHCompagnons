@@ -161,7 +161,7 @@ Un joueur qui vise son compagnon et clique le fait sauter (un saut puis un petit
 
 - Le compagnon n'a pas de hitbox (entités d'affichage) : le clic compte quand le regard du joueur passe sur le modèle, à portée de main. Rien n'est ajouté chez les clients et aucun paquet ne part tant que personne ne clique.
 - Clic gauche toujours. Clic droit seulement avec un objet en main ou un bloc visé : sans cela le client n'envoie rien au serveur.
-- Accroupi, le compagnon ne tourne plus avec le regard : le joueur peut se tourner vers lui pour le viser.
+- Accroupi, le compagnon ne tourne plus avec le regard : le joueur peut se tourner vers lui pour le viser. Dès qu'il le regarde, le compagnon se tourne vers lui et lui fait face (`turn.face_owner_when_watched`), puis reprend sa place quand le joueur regarde ailleurs ou se relève.
 - Réglages dans `companion_settings.click` (délai entre deux réactions, hauteur du saut, marge de visée, son par défaut, particule, affichage de la phrase) ; chaque compagnon peut avoir son son (`click.sound`, `click.pitch`).
 - Coût d'un saut : 6 images clés par entité du modèle et par joueur qui voit le compagnon, au plus une fois par `cooldown_ticks`.
 

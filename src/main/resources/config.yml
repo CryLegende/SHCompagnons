@@ -22,7 +22,7 @@
 #
 # Clic sur son compagnon : le joueur qui vise son compagnon et clique le fait sauter, avec un son, une particule et
 # une phrase (companion_settings.click, phrases dans messages.yml). Accroupi, le compagnon ne tourne plus avec le
-# regard : le joueur peut se tourner vers lui.
+# regard : le joueur peut se tourner vers lui, et le compagnon se tourne alors vers le joueur.
 #
 # Placeholders : %shcompagnons_current_pet_type%, %shcompagnons_current_pet_displayname%.
 # Messages : messages.yml.
@@ -161,6 +161,9 @@ companion_settings:
     # Accroupi, le compagnon garde son orientation : le joueur peut se retourner pour le regarder. En mode FREE seule
     # l'orientation est figée, la position suit toujours. false : le compagnon suit toujours le regard.
     freeze_when_sneaking: true
+    # Accroupi, quand le joueur tourne son regard vers son compagnon, celui-ci se tourne vers lui et lui fait face
+    # tant qu'il le regarde ; il reprend sa place dès que le joueur regarde ailleurs ou se relève.
+    face_owner_when_watched: true
     # Au relevé, le compagnon reprend le regard du joueur en autant de ticks (mode ATTACHED ; en mode FREE il le
     # rattrape par paliers). 0 : même lissage que d'habitude (smoothing_ticks).
     resume_smoothing_ticks: 8

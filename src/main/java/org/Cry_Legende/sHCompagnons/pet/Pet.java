@@ -48,8 +48,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * Deux animations se combinent : celle du compagnon entier (rebond, montée et descente...), commune à toutes les
  * pièces, et celle que le modèle donne à certaines pièces (ailes, oreilles...). Une pièce ne reçoit jamais qu'une
  * cible à la fois : la prochaine image clé de l'une ou de l'autre, calculée avec les deux. Un changement de texture
- * (clignement) part avec la cible en cours, pour ne pas faire sauter le trajet. Quand le propriétaire clique sur son
- * compagnon, un saut remplace l'animation du compagnon entier le temps de quelques images clés.
+ * (clignement) part avec la cible en cours, pour ne pas faire sauter le trajet. Quelques images clés imposées
+ * remplacent un instant l'animation du compagnon entier : il se tourne vers son propriétaire accroupi qui le regarde,
+ * et saute quand celui-ci clique sur lui.
  *
  * Les joueurs qui voient le compagnon sont exactement ceux qui voient son propriétaire (événements de suivi de
  * Paper) plus le propriétaire lui-même. Un propriétaire invisible n'est plus vu de personne : son compagnon
@@ -106,17 +107,32 @@ public final class Pet {
     private Animation.Frame frameFrom = Animation.Frame.REST;
     private Animation.Frame frame = Animation.Frame.REST;
 
-    // Saut au clic du propriétaire : part de la hauteur du saut à chaque image clé, une toutes les HOP_STEP ticks (un
-    // saut, puis un petit rebond). reactionKey : prochaine image clé du saut (-1 : pas de saut en cours) ;
-    // reactionBase : position du compagnon au départ du saut, où il retombe ; clock : dernier tick vu
+    // Images clés imposées au compagnon entier, à la place de son animation, qui reprend ensuite où elle en était.
+    // script : positions à atteindre l'une après l'autre, une tous les scriptStep ticks ; scriptKey : la prochaine
+    // (-1 : aucune en cours) ; scriptTurns : la première porte la rotation (le compagnon tournait quand elle part)
+    private Animation.Frame[] script = new Animation.Frame[0];
+    private int scriptStep;
+    private int scriptKey = -1;
+    private boolean scriptTurns;
+    // Saut au clic du propriétaire : part de la hauteur du saut à chaque image clé (un saut, puis un petit rebond).
+    // clock : dernier tick vu
     private static final float[] HOP = {0.75f, 1.0f, 0.75f, 0.0f, 0.3f, 0.0f};
     private static final int HOP_STEP = 2;
     private static final double CLICK_REACH = 4.5;
     private int clock;
     private boolean reactionAsked;
-    private int reactionKey = -1;
-    private Animation.Frame reactionBase = Animation.Frame.REST;
     private int reactionReadyTick;
+    // Face à face : le propriétaire accroupi regarde son compagnon (à moins de 40° de son regard, puis tant qu'il
+    // reste à moins de 60°), le modèle tourne sur lui-même pour lui faire face. facing : angle appliqué (degrés,
+    // ajouté à la rotation de toute image du compagnon entier) ; facingWanted : angle voulu ; frontYaw : angle que
+    // le placement par défaut donne déjà au modèle par rapport à l'avant du joueur
+    private static final double WATCH_ENTER = Math.cos(Math.toRadians(40));
+    private static final double WATCH_RELEASE = Math.cos(Math.toRadians(60));
+    private static final float TURN_STEP_DEGREES = 40;
+    private static final int TURN_STEP = 3;
+    private final float frontYaw;
+    private float facing;
+    private float facingWanted;
 
     // Animation propre aux pièces du modèle. poses : dernière pose visée par pièce (repère du modèle) ; looks :
     // apparence affichée ; poseDue, lookDue : tick de la prochaine image clé et du prochain changement d'apparence
@@ -170,6 +186,8 @@ public final class Pet {
         this.turnInterval = Math.max(settings.turnInterval(), (count + budget - 1) / budget);
         this.turnSmoothing = turnInterval > settings.turnInterval() ? Math.max(settings.turnSmoothing(), turnInterval + 1) : settings.turnSmoothing();
         this.ownerEntityId = owner.getEntityId();
+        Quaternionfc front = settings.placement().rotation();
+        this.frontYaw = (float) Math.toDegrees(2 * Math.atan2(front.y(), front.w()));
         this.sentYaw = owner.getYaw();
         this.freeYaw = sentYaw;
         if (type.animation().moves()) {
@@ -260,7 +278,7 @@ public final class Pet {
         double cos = Math.cos(yaw);
         double sin = Math.sin(yaw);
         double x = root.getX() + offset.x() * cos - offset.z() * sin - eye.getX();
-        double y = root.getY() + offset.y() + frame.offset().y() - eye.getY();
+        double y = root.getY() + offset.y() + frameAt(clock).offset().y() - eye.getY();
         double z = root.getZ() + offset.x() * sin + offset.z() * cos - eye.getZ();
         org.bukkit.util.Vector look = eye.getDirection();
         double along = x * look.getX() + y * look.getY() + z * look.getZ();
@@ -413,9 +431,17 @@ public final class Pet {
             applyInvisibility();
         }
         trackActivity(now);
-        if (reactionAsked) {
-            reactionAsked = false;
-            startReaction(now);
+        if (settings.faceOwnerWhenWatched()) {
+            facingWanted = watched();
+        }
+        if (scriptKey < 0) {
+            // Il se tourne d'abord vers son propriétaire, puis saute : le clic le trouve de face
+            if (Math.abs(facingWanted - facing) > 1) {
+                startTurn(now);
+            } else if (reactionAsked) {
+                reactionAsked = false;
+                startHop(now);
+            }
         }
         if (!pending.isEmpty()) {
             spawnPending(now);
@@ -469,18 +495,87 @@ public final class Pet {
         }
     }
 
-    /** Départ du saut au clic : il part de la position affichée à cet instant, et réveille un compagnon au repos. */
-    private void startReaction(int now) {
+    /**
+     * Lance des images clés imposées (positions relatives à celle affichée à cet instant, rendue par la méthode) et
+     * réveille un compagnon au repos.
+     */
+    private Animation.Frame startScript(int now, int length, int step) {
         lastActiveTick = now;
         if (resting) {
             resting = false;
             animationTime = 0;
             partsEpoch = Integer.MIN_VALUE;
         }
-        reactionBase = frameAt(now);
-        frame = reactionBase;
-        reactionKey = 0;
+        // Le client fait encore tourner le modèle vers la cible précédente : la première image clé redonne la rotation
+        scriptTurns = now < nextKeyframeTick && frame.spin() != frameFrom.spin();
+        Animation.Frame base = frameAt(now);
+        frame = base;
+        script = new Animation.Frame[length];
+        scriptStep = step;
+        scriptKey = 0;
         nextKeyframeTick = now;
+        return base;
+    }
+
+    /** Saut au clic : un saut puis un petit rebond, et le compagnon retombe d'où il est parti. */
+    private void startHop(int now) {
+        Animation.Frame base = startScript(now, HOP.length, HOP_STEP);
+        for (int k = 0; k < HOP.length; k++) {
+            script[k] = new Animation.Frame(new Vector3f(base.offset()).add(0, HOP[k] * settings.click().hopHeight(), 0), base.spin());
+        }
+    }
+
+    /**
+     * Le modèle tourne sur lui-même vers son nouvel angle, par étapes de 40° au plus : entre deux images clés le
+     * client déplace les pièces en ligne droite, un grand angle d'un coup resserrerait le modèle en chemin.
+     */
+    private void startTurn(int now) {
+        float delta = facingWanted - facing;
+        facing = facingWanted;
+        int steps = Math.max(1, (int) Math.ceil(Math.abs(delta) / TURN_STEP_DEGREES));
+        Animation.Frame base = startScript(now, steps, TURN_STEP);
+        for (int k = 0; k < steps; k++) {
+            script[k] = new Animation.Frame(base.offset(), base.spin() + delta * (k + 1) / steps);
+        }
+    }
+
+    /**
+     * Le propriétaire accroupi regarde-t-il son compagnon ? Rend alors l'angle (degrés) dont le modèle doit tourner
+     * sur lui-même pour lui faire face, sinon 0. Lu juste après trackActivity : « probe » est la position du joueur.
+     */
+    private float watched() {
+        if (shown.isEmpty() || !owner.isSneaking() || (!attached && probe.getWorld() != freeWorld)) {
+            return 0;
+        }
+        Vector3fc offset = type.placement().offset();
+        double yaw = Math.toRadians(sentYaw);
+        double cos = Math.cos(yaw);
+        double sin = Math.sin(yaw);
+        // Du joueur vers le centre du modèle, à plat
+        double x = offset.x() * cos - offset.z() * sin + (attached ? 0 : freeX - probe.getX());
+        double z = offset.x() * sin + offset.z() * cos + (attached ? 0 : freeZ - probe.getZ());
+        double length = Math.sqrt(x * x + z * z);
+        if (length < 0.05) {
+            return 0;
+        }
+        double look = Math.toRadians(probe.getYaw());
+        double along = (-Math.sin(look) * x + Math.cos(look) * z) / length;
+        if (along < (facingWanted != 0 ? WATCH_RELEASE : WATCH_ENTER)) {
+            return 0;
+        }
+        if (facingWanted != 0) {
+            return facingWanted;
+        }
+        // Direction du compagnon vers le joueur dans le repère du modèle (x à gauche du joueur, z devant lui)
+        double towardX = -(x * cos + z * sin);
+        double towardZ = -(-x * sin + z * cos);
+        float turn = Location.normalizeYaw((float) Math.toDegrees(Math.atan2(towardX, towardZ)) - frontYaw);
+        return Math.abs(turn) < 2 ? 0 : turn;
+    }
+
+    /** Image du compagnon entier tournée de l'angle du face à face. */
+    private Animation.Frame faced(Animation.Frame base) {
+        return facing == 0 ? base : new Animation.Frame(base.offset(), base.spin() + facing);
     }
 
     private void spawnPending(int now) {
@@ -739,31 +834,29 @@ public final class Pet {
      * aux pièces animées du modèle. Le client fait chaque trajet seul, de ce qu'il affiche à la cible, en « durée » ticks.
      */
     private void animate(int now) {
-        boolean moves = reactionKey >= 0 || type.animation().moves();
+        boolean moves = scriptKey >= 0 || type.animation().moves();
         boolean whole = moves && now >= nextKeyframeTick;
         boolean turns = false;
-        if (whole && reactionKey >= HOP.length) {
-            // Saut terminé, le compagnon est retombé à son point de départ : son animation reprend où elle en était
-            reactionKey = -1;
+        if (whole && scriptKey >= script.length) {
+            // Images clés imposées terminées : l'animation du compagnon reprend où elle en était
+            scriptKey = -1;
             moves = type.animation().moves();
             whole = moves;
         }
-        if (whole && reactionKey >= 0) {
+        if (whole && scriptKey >= 0) {
             frameFrom = frame;
-            frame = new Animation.Frame(
-                new Vector3f(reactionBase.offset()).add(0, HOP[reactionKey] * settings.click().hopHeight(), 0), reactionBase.spin());
-            // Un compagnon qui tournait sur lui-même s'arrête à l'angle du départ : la rotation part avec la première image clé
-            turns = reactionKey == 0 && reactionBase.spin() != 0;
-            reactionKey++;
+            frame = script[scriptKey];
+            turns = frame.spin() != frameFrom.spin() || (scriptKey == 0 && scriptTurns);
+            scriptKey++;
             segmentStart = now;
-            nextKeyframeTick = now + HOP_STEP;
+            nextKeyframeTick = now + scriptStep;
         } else if (whole) {
             Animation animation = type.animation();
             double next = animation.nextKey(animationTime);
             int duration = Math.max(1, (int) Math.round((next - animationTime) / type.animationSpeed()));
             animationTime = animation.wrap(next);
             frameFrom = frame;
-            frame = animation.frame(next, type.animationAmplitude());
+            frame = faced(animation.frame(next, type.animationAmplitude()));
             // La rotation n'est renvoyée que si l'animation fait tourner le modèle (SPIN) : 18 octets de moins par pièce
             turns = frame.spin() != frameFrom.spin();
             segmentStart = now;
@@ -873,8 +966,8 @@ public final class Pet {
 
     /** Repos : toutes les pièces reviennent doucement à la pose et à l'apparence de base du modèle, à sa position neutre. */
     private void rest() {
-        reactionKey = -1;
-        frame = Animation.Frame.REST;
+        scriptKey = -1;
+        frame = faced(Animation.Frame.REST);
         frameFrom = frame;
         animationTime = 0;
         List<List<EntityData<?>>> updates = new ArrayList<>(ids.length);
