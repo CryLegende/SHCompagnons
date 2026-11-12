@@ -8,7 +8,7 @@ const battre = (t, a) => ({ t, groups: { oreilleG: { rot: [0, 0, a] }, oreilleD:
 const def = {
     name: 'bebe_yoda',
     title: 'Bébé Yoda',
-    scale: 0.44,
+    scale: 0.48,
     palette: { g: '#93c06c', G: '#74a052', p: '#dba1a6', k: { c: '#17130f', n: 0 }, e: { c: '#ffffff', n: 0 }, t: '#b89c70', T: '#93794f', c: '#dfe2e6', C: '#b7bcc4', i: '#3c3f47', I: '#2c2e35', m: '#8d939c' },
     groups: { oreilleG, oreilleD: mirroredGroup(oreilleG), tete: { pivot: [0, 6.2, 0.8] } },
     parts: [
@@ -19,9 +19,9 @@ const def = {
         oreille, mirrored(oreille, 'oreilleD'),
     ],
     clips: [
-        { loop: 60, keys: [battre(40, -12), battre(43, 8), battre(47, -24), battre(51, 4), battre(56, -12)] },
+        { loop: 110, keys: [battre(80, -12), battre(84, 8), battre(89, -24), battre(94, 4), battre(100, -12)] },
     ],
-    frames: [0, 43, 47, 51],
+    frames: [0, 84, 89, 94],
 };
 def.clips.push(clin(def, 'tete', { 2: 'gggggggg', 3: 'gggggggg' }, 79));
 export default def;

@@ -7,7 +7,7 @@ const non = (t, a) => ({ t, groups: { tete: { rot: [0, a, 0] } } });
 const def = {
     name: 'villageois',
     title: 'Villageois',
-    scale: 0.38,
+    scale: 0.42,
     palette: { v: '#bd8b72', V: '#a37259', u: { c: '#3b2a20', n: 0.03 }, w: { c: '#ffffff', n: 0 }, g: { c: '#2f8f3f', n: 0.02 }, m: '#8a5f4c', n: '#a67862', N: '#8d624e', r: '#6a4a34', R: '#553a28', b: '#8a6444', s: '#4a3a30', p: '#e3c35a', P: '#c9a640', q: '#f0d77a' },
     groups: { tete: { pivot: [0, 7.6, 0] } },
     parts: [

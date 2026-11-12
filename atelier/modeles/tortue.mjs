@@ -10,7 +10,7 @@ const nage = (t, a, z, r, cou = 0) => ({ t, parts: { tete: { pos: [0, 3.5 + cou 
 const def = {
     name: 'tortue',
     title: 'Tortue',
-    scale: 0.4,
+    scale: 0.46,
     palette: { g: '#4f9b3d', G: '#3b7b2e', l: '#7fc65c', s: '#8fd06c', S: '#6fb04f', y: '#e6dc8e', Y: '#cfc272', k: { c: '#16201a', n: 0.01 }, e: { c: '#ffffff', n: 0 } },
     groups: { avantG, avantD: mirroredGroup(avantG), arriereG, arriereD: mirroredGroup(arriereG) },
     parts: [
@@ -22,9 +22,9 @@ const def = {
         { id: 'queue', size: [1.3, 1, 2], pos: [0, 2.2, -5.9], skin: { all: 'S' } },
     ],
     clips: [
-        { loop: 44, keys: [nage(11, 24, 22, 10, 0.9), nage(22, -22, 8, 28, 0.5), nage(33, -48, -12, 44)] },
+        { loop: 90, keys: [nage(10, 24, 22, 10, 0.9), nage(24, -22, 8, 28, 0.5), nage(38, -48, -12, 44), { t: 54 }] },
     ],
-    frames: [0, 11, 22, 33],
+    frames: [0, 10, 24, 38, 54],
 };
 def.clips.push(clin(def, 'tete', { 2: 'ssssssss' }, 113));
 export default def;

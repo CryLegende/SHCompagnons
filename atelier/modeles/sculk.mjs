@@ -8,7 +8,7 @@ const wig = (t, k) => ({ t, groups: Object.fromEntries(P.map(([x, z], i) => ['c'
 export default {
     name: 'sculk',
     title: 'Sculk',
-    scale: 0.58,
+    scale: 0.55,
     palette: { s: '#0c2a33', S: '#081d24', t: '#0f4a56', c: { c: '#29dfeb', n: 0.04 }, C: '#17a3b0' },
     noise: 0.09,
     groups: Object.fromEntries(P.map(([x, z], i) => ['c' + i, { pivot: [x, 7, z], rot: lean(x, z, 12, 12) }])),
@@ -18,8 +18,8 @@ export default {
         ...P.map(([x, z], i) => ({ id: 'c' + i, group: 'c' + i, size: [1.1, 3.4, 1.1], pos: [x, 8.6, z], skin: { all: 't', sides: ['cccccccc', 'cCcccCcc', 'CCCCCCCC', 'tCtttCtt', 'tttttttt', 'tttstttt', 'ststtsts', 'ssssssss'], top: 'c', bottom: 's', seed: 'tentacule' } })),
     ],
     clips: [
-        { loop: 30, keys: [wig(8, 1), wig(22, -1)] },
+        { loop: 90, keys: [wig(8, 1), wig(22, -1), wig(36, 1), { t: 48 }] },
         cycle(['corps'], TETES.Sculk),
     ],
-    frames: [0, 8, 15, 22, 121, 123],
+    frames: [0, 8, 22, 36, 121, 123],
 };

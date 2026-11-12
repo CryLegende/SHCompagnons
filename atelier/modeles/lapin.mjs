@@ -12,7 +12,7 @@ const pied = { id: 'piedG', size: [2.1, 1.8, 3.6], pos: [2.9, 0.9, -0.4], skin: 
 const def = {
     name: 'lapin',
     title: 'Lapin',
-    scale: 0.46,
+    scale: 0.5,
     palette: { f: '#a4897a', F: '#8a7163', c: '#eadfd2', p: '#eaa6a8', n: '#d9838a', w: '#f6f1ea', k: { c: '#231a17', n: 0.01 }, b: { c: '#ffffff', n: 0 } },
     groups: { oreilleG, oreilleD: mirroredGroup(oreilleG) },
     parts: [

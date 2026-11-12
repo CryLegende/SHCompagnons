@@ -8,7 +8,7 @@ const tourne = (t, a) => ({ t, groups: { dome: { rot: [0, a, 0] } } });
 export default {
     name: 'r2d2',
     title: 'R2-D2',
-    scale: 0.44,
+    scale: 0.5,
     palette: { w: '#eef0f3', W: '#d5d9df', b: '#2c50aa', B: '#213d85', s: '#bcc3cb', S: '#9aa1aa', k: { c: '#15171c', n: 0 }, r: { c: '#ee3030', n: 0 }, c: { c: '#39a8ff', n: 0 } },
     groups: { dome: { pivot: [0, 8.6, 0] } },
     parts: [

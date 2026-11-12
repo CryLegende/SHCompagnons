@@ -11,11 +11,12 @@ const fruit = (etire) => ({ all: 'y', front: ecailles(etire), back: ecailles(eti
 const feuille = { all: 'g', front: ['vvGggvvv', 'vgGggvvg', 'ggGggggg', 'ggGggggg', 'ggGggggg', 'gGGggggG', 'GGGgggGG', 'GGGGGGGG'], back: ['vvvggGvv', 'gvvggGgv', 'gggggGgg', 'gggggGgg', 'gggggGgg', 'GggggGGg', 'GGgggGGG', 'GGGGGGGG'], sides: 'G', top: 'v', bottom: 'G', seed: 'feuille' };
 // Couronne : cinq feuilles penchées vers l'extérieur, trois plus droites au milieu (inclinaison, direction, longueur)
 const FEUILLES = [[40, 0, 4.8], [40, 72, 4.4], [40, 144, 4.8], [40, 216, 4.4], [40, 288, 4.8], [16, 36, 5.6], [16, 156, 5.2], [16, 276, 5.6]];
-const onduler = (t, k) => ({ t, groups: Object.fromEntries(FEUILLES.map(([tilt, yaw], i) => ['f' + i, { rot: [tilt + (i % 2 ? -k : k) * (tilt > 20 ? 9 : 6), yaw, 0] }])) });
+// seules les cinq feuilles du tour ondulent
+const onduler = (t, k) => ({ t, groups: Object.fromEntries(FEUILLES.map(([tilt, yaw], i) => ['f' + i, { rot: [tilt + (i % 2 ? -k : k) * 8, yaw, 0] }]).filter((_, i) => FEUILLES[i][0] > 20)) });
 export default {
-    name: 'ananas',
+    name: 'ete_ananas',
     title: 'Ananas',
-    scale: 0.48,
+    scale: 0.52,
     palette: { y: '#e9b93c', l: '#f5d564', o: '#d9982c', O: '#b97a22', b: '#a8701f', g: '#3f9040', G: '#2d6e30', v: '#63b550' },
     noise: 0.06,
     groups: Object.fromEntries(FEUILLES.map(([tilt, yaw], i) => ['f' + i, { pivot: [0, 9.2, 0], rot: [tilt, yaw, 0] }])),
@@ -26,7 +27,7 @@ export default {
         ...FEUILLES.map(([tilt, , length], i) => ({ id: 'f' + i, group: 'f' + i, size: [tilt > 20 ? 1.9 : 1.6, length, 0.5], pos: [0, 9.2 + length / 2 - 0.2, tilt > 20 ? 0.9 : 0.3], skin: feuille })),
     ],
     clips: [
-        { loop: 56, keys: [onduler(14, 1), onduler(42, -1)] },
+        { loop: 110, keys: [onduler(16, 1), onduler(44, -1), { t: 60 }] },
     ],
-    frames: [0, 14, 28, 42],
+    frames: [0, 16, 30, 44],
 };

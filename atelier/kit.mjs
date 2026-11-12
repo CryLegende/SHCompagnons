@@ -9,6 +9,8 @@
 //     groups: { id: { pivot: [x,y,z], rot: [rx,ry,rz], move: [x,y,z], scale: k, stretch: [x,y,z], parent } },
 //     parts:  [ { id, size: [l,h,p], pos: [x,y,z] (centre), rot: [rx,ry,rz], group, skin } ],
 //     clips:  [ { loop: ticks, keys: [ { t, groups: { id: {...} }, parts: { id: { pos, rot, size, skin } } } ] } ],
+//             un mouvement d'une clé à la suivante part et arrive en douceur (clés intermédiaires ajoutées dès qu'il
+//             dure 8 ticks) ; « lineaire: true » sur l'animation, ou « sec: true » sur une clé, garde le trajet droit
 //     frames: [ticks à montrer dans l'aperçu] }
 // Une pose (clé) = la pose de base avec ses propres changements, pas ceux de la clé précédente.
 //
@@ -166,9 +168,44 @@ export function build(def, textures = {}) {
     const lines = ['# ' + (def.title || def.name) + ' — modèle SkyHand', summon(null)];
     for (const clip of def.clips || []) {
         lines.push('@animation loop=' + clip.loop);
-        for (const key of clip.keys) { lines.push('@pose ' + key.t); lines.push(summon(key)); }
+        for (const key of eased(def, clip)) { lines.push('@pose ' + key.t); lines.push(summon(key)); }
     }
     return { text: lines.join('\n') + '\n', skins, parts: def.parts.length };
+}
+
+// ---------------------------------------------------------------- mouvements adoucis
+const smooth = (x) => x * x * (3 - 2 * x);
+const mix = (a, b, k) => (Array.isArray(a) ? a.map((v, i) => v + (b[i] - v) * k) : a + (b - a) * k);
+/**
+ * Clés d'une animation avec leurs clés intermédiaires. Le client va en ligne droite et à vitesse constante d'une clé
+ * à la suivante : pour qu'un mouvement parte et arrive en douceur, il est découpé en trois ou quatre tronçons dont
+ * l'avancée suit une courbe en S. Seuls les mouvements d'au moins 8 ticks sont découpés.
+ */
+export function eased(def, clip) {
+    if (clip.lineaire) return clip.keys;
+    const groupIds = new Set(), partIds = new Set();
+    for (const key of clip.keys) { Object.keys(key.groups || {}).forEach((g) => groupIds.add(g)); Object.keys(key.parts || {}).forEach((p) => partIds.add(p)); }
+    const group = (id, key) => { const g = (def.groups || {})[id]; if (!g) throw new Error('groupe inconnu ' + id); return { rot: g.rot || [0, 0, 0], move: g.move || [0, 0, 0], stretch: g.stretch || [1, 1, 1], scale: g.scale === undefined ? 1 : g.scale, ...((key && key.groups && key.groups[id]) || {}) }; };
+    const part = (id, key) => { const p = def.parts.find((x) => x.id === id); if (!p) throw new Error('pièce inconnue ' + id); return { pos: p.pos, rot: p.rot || [0, 0, 0], size: p.size, skin: p.skin, ...((key && key.parts && key.parts[id]) || {}) }; };
+    const state = (key) => ({ groups: Object.fromEntries([...groupIds].map((id) => [id, group(id, key)])), parts: Object.fromEntries([...partIds].map((id) => [id, part(id, key)])) });
+    const shape = (s) => JSON.stringify([Object.values(s.groups), Object.values(s.parts).map((p) => [p.pos, p.rot, p.size])]);
+    const stops = [{ t: 0, s: state(null) }, ...clip.keys.map((k) => ({ t: k.t, s: state(k), sec: k.sec })), { t: clip.loop, s: state(null) }];
+    const out = [];
+    for (let i = 0; i + 1 < stops.length; i++) {
+        const a = stops[i], b = stops[i + 1], d = b.t - a.t;
+        const n = b.sec || d < 8 || shape(a.s) === shape(b.s) ? 1 : d >= 16 ? 4 : 3;
+        for (let j = 1; j < n; j++) {
+            const k = smooth(j / n);
+            out.push({
+                t: a.t + Math.round(d * j / n),
+                groups: Object.fromEntries(Object.entries(a.s.groups).map(([id, g]) => [id, { rot: mix(g.rot, b.s.groups[id].rot, k), move: mix(g.move, b.s.groups[id].move, k), stretch: mix(g.stretch, b.s.groups[id].stretch, k), scale: mix(g.scale, b.s.groups[id].scale, k) }])),
+                // la texture reste celle de la clé de départ jusqu'à la clé d'arrivée
+                parts: Object.fromEntries(Object.entries(a.s.parts).map(([id, p]) => [id, { pos: mix(p.pos, b.s.parts[id].pos, k), rot: mix(p.rot, b.s.parts[id].rot, k), size: mix(p.size, b.s.parts[id].size, k), skin: p.skin }])),
+            });
+        }
+        if (i + 2 < stops.length) out.push({ t: b.t, groups: b.s.groups, parts: b.s.parts });
+    }
+    return out;
 }
 
 // ---------------------------------------------------------------- aides de dessin

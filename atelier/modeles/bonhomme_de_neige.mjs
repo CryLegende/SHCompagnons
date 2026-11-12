@@ -3,11 +3,12 @@ import { mirrored, mirroredGroup } from '../kit.mjs';
 
 const brasG = { pivot: [3.6, 4.8, 0], rot: [0, 0, 24] };
 const bras = { id: 'brasG', group: 'brasG', size: [5, 0.8, 0.8], pos: [6, 4.8, 0], skin: { all: 'b', seed: 'brindille' } };
-const saluer = (t, a, r) => ({ t, groups: { brasG: { rot: [0, 0, a] }, brasD: { rot: [0, 0, -a] }, tete: { rot: [0, 0, r] } } });
+const saluer = (t, a) => ({ t, groups: { brasG: { rot: [0, 0, a] }, brasD: { rot: [0, 0, -a] } } });
+const pencher = (t, r) => ({ t, groups: { tete: { rot: [0, 0, r] } } });
 export default {
     name: 'bonhomme_de_neige',
     title: 'Bonhomme de neige',
-    scale: 0.4,
+    scale: 0.42,
     palette: { w: '#f5f8fb', W: '#dde5ee', k: { c: '#26262b', n: 0.02 }, o: '#f18c26', O: '#cc6c16', r: '#cb343c', R: '#9f222b', p: '#ffffff', b: '#6d4b30' },
     groups: { brasG, brasD: mirroredGroup(brasG), tete: { pivot: [0, 6.4, 0] } },
     parts: [
@@ -22,7 +23,8 @@ export default {
         bras, mirrored(bras, 'brasD'),
     ],
     clips: [
-        { loop: 40, keys: [saluer(10, 52, 6), saluer(30, 8, -6)] },
+        { loop: 110, keys: [saluer(10, 52), saluer(24, 8), saluer(38, 52), saluer(52, 8), { t: 62 }] },
+        { loop: 110, keys: [pencher(16, 6), pencher(46, 6), pencher(62, 0)] },
     ],
-    frames: [0, 10, 20, 30],
+    frames: [0, 10, 24, 38, 52],
 };

@@ -21,11 +21,11 @@ const def = {
         { id: 'queue', size: [1, 1.9, 1], pos: [0, 7.2, -6.4], rot: [35, 0, 0], skin: { all: 'P' } },
     ],
     clips: [
-        { loop: 24, keys: [{ t: 4, parts: { groin: { pos: [0, 6.2, 8.4] } } }, { t: 8 }, { t: 12, parts: { groin: { pos: [0, 6.2, 8.4] } } }, { t: 16 }] },
-        { loop: 64, keys: [{ t: 48 }, { t: 51, groups: { oreilleG: { rot: [0, 0, 18] }, oreilleD: { rot: [0, 0, -18] } } }, { t: 55 }, { t: 58, groups: { oreilleG: { rot: [0, 0, 18] }, oreilleD: { rot: [0, 0, -18] } } }, { t: 62 }] },
-        { loop: 16, keys: [{ t: 4, parts: { queue: { rot: [35, 0, 28] } } }, { t: 12, parts: { queue: { rot: [35, 0, -28] } } }] },
+        { loop: 80, keys: [{ t: 44 }, { t: 48, parts: { groin: { pos: [0, 6.2, 8.4] } } }, { t: 52 }, { t: 56, parts: { groin: { pos: [0, 6.2, 8.4] } } }, { t: 60 }] },
+        { loop: 100, keys: [{ t: 70 }, { t: 74, groups: { oreilleG: { rot: [0, 0, 18] }, oreilleD: { rot: [0, 0, -18] } } }, { t: 79 }, { t: 83, groups: { oreilleG: { rot: [0, 0, 18] }, oreilleD: { rot: [0, 0, -18] } } }, { t: 88 }] },
+        { loop: 70, keys: [{ t: 6, parts: { queue: { rot: [35, 0, 28] } } }, { t: 14, parts: { queue: { rot: [35, 0, -28] } } }, { t: 22, parts: { queue: { rot: [35, 0, 28] } } }, { t: 30, parts: { queue: { rot: [35, 0, -28] } } }, { t: 36 }] },
     ],
-    frames: [0, 4, 8, 51, 55, 58],
+    frames: [0, 48, 52, 74, 79, 6],
 };
 def.clips.push(clin(def, 'tete', { 2: 'pppppppp', 3: 'kkppppkk' }, 101));
 export default def;

@@ -71,6 +71,17 @@ public final class Pet {
     private final Map<UUID, Player> shown = new ConcurrentHashMap<>();
     // Joueurs à qui envoyer le modèle au prochain tick (après le paquet d'apparition du propriétaire)
     private final Map<UUID, Player> pending = new ConcurrentHashMap<>();
+    // Joueurs chez qui le modèle vient d'apparaître, encore réduit à un point le temps que leur client télécharge les
+    // textures des têtes : tick de l'apparition. Le modèle se déploie quand le délai est passé.
+    private final Map<UUID, Integer> preloading = new java.util.HashMap<>();
+    // Textures que les animations afficheront plus tard, montrées pendant ce délai sur les têtes du modèle pour que
+    // le client les ait déjà quand elles servent ; hosts : pièces qui portent un objet
+    private final List<EntityData<?>> laterLooks = new ArrayList<>();
+    private final List<Integer> hosts = new ArrayList<>();
+    private final int preloadTicks;
+    private static final int PRELOAD_STEP_TICKS = 2;
+    private static final int REVEAL_TICKS = 3;
+    private static final float PRELOAD_SCALE = 1.0e-4f;
     private boolean hidden;
     private boolean removed;
     // Le propriétaire est invisible (potion, WorldGuard, setInvisible...) : le modèle ne reste que chez lui, si la config le veut
@@ -165,6 +176,23 @@ public final class Pet {
             any |= part.track() != null || part.looks() != null;
         }
         this.animated = any;
+        for (int i = 0; i < count; i++) {
+            Part part = type.parts().get(i);
+            if (part.type() != com.github.retrooper.packetevents.protocol.entity.type.EntityTypes.ITEM_DISPLAY) {
+                continue;
+            }
+            hosts.add(i);
+            Looks cycle = part.looks();
+            for (int key = 1; cycle != null && key < cycle.keys(); key++) {
+                EntityData<?> look = cycle.look(key);
+                if (laterLooks.stream().noneMatch(known -> known == look)) {
+                    laterLooks.add(look);
+                }
+            }
+        }
+        // Chaque tête montre une texture à venir pendant PRELOAD_STEP_TICKS : le délai s'allonge s'il en faut plus
+        int steps = hosts.isEmpty() ? 0 : (laterLooks.size() + hosts.size() - 1) / hosts.size();
+        this.preloadTicks = settings.preloadTicks() == 0 ? 0 : Math.max(settings.preloadTicks(), steps * PRELOAD_STEP_TICKS + 2);
     }
 
     public Player owner() {
@@ -232,6 +260,7 @@ public final class Pet {
     /** Ce joueur ne voit plus le propriétaire : le modèle disparaît aussitôt de chez lui. */
     public synchronized void untrack(Player viewer) {
         pending.remove(viewer.getUniqueId());
+        preloading.remove(viewer.getUniqueId());
         if (shown.remove(viewer.getUniqueId()) != null) {
             Packets.send(viewer, List.of(new WrapperPlayServerDestroyEntities(ids)));
         }
@@ -240,6 +269,7 @@ public final class Pet {
     /** Joueur déconnecté : rien à lui envoyer. */
     public synchronized void forget(UUID viewer) {
         pending.remove(viewer);
+        preloading.remove(viewer);
         shown.remove(viewer);
     }
 
@@ -287,6 +317,7 @@ public final class Pet {
             Player viewer = it.next();
             if (!mayShowTo(viewer.getUniqueId())) {
                 it.remove();
+                preloading.remove(viewer.getUniqueId());
                 Packets.send(viewer, List.of(new WrapperPlayServerDestroyEntities(ids)));
             }
         }
@@ -314,6 +345,7 @@ public final class Pet {
             Packets.send(viewer, packets, passengers);
         }
         shown.clear();
+        preloading.clear();
     }
 
     /** Un tick du serveur (fil principal). */
@@ -328,7 +360,10 @@ public final class Pet {
         }
         trackActivity(now);
         if (!pending.isEmpty()) {
-            spawnPending();
+            spawnPending(now);
+        }
+        if (!preloading.isEmpty()) {
+            preload(now);
         }
         if (shown.isEmpty()) {
             return;
@@ -376,7 +411,7 @@ public final class Pet {
         }
     }
 
-    private void spawnPending() {
+    private void spawnPending(int now) {
         if (!attached && freeWorld == null) {
             resetFree();
             lastSentX = freeX;
@@ -394,7 +429,7 @@ public final class Pet {
             for (int i = 0; i < ids.length; i++) {
                 packets.add(new WrapperPlayServerSpawnEntity(ids[i], Optional.of(uuids[i]), type.parts().get(i).type(),
                     position, 0.0f, sentYaw, 0.0f, 0, Optional.of(ZERO)));
-                packets.add(new WrapperPlayServerEntityMetadata(ids[i], fullData(i)));
+                packets.add(new WrapperPlayServerEntityMetadata(ids[i], fullData(i, preloadTicks > 0)));
             }
             if (ids.length > 1) {
                 int[] riders = new int[ids.length - 1];
@@ -413,6 +448,9 @@ public final class Pet {
             packets.add(new WrapperPlayServerBundle());
             // Rangé avant la remise du lot : le fil réseau peut le traiter aussitôt
             shown.put(viewer.getUniqueId(), viewer);
+            if (preloadTicks > 0) {
+                preloading.put(viewer.getUniqueId(), now);
+            }
             Packets.send(viewer, packets, mount);
         }
         pending.clear();
@@ -436,8 +474,58 @@ public final class Pet {
         return new Vector3d(location.getX(), location.getY() + owner.getHeight(), location.getZ());
     }
 
-    /** Toutes les métadonnées d'une pièce, pour son apparition. */
-    private List<EntityData<?>> fullData(int index) {
+    /**
+     * Préchargement des textures. Un client télécharge la texture d'une tête la première fois qu'il l'affiche, et
+     * montre une tête par défaut en attendant. Le modèle apparaît donc d'abord réduit à un point : ses têtes sont
+     * affichées, donc téléchargées, sans être vues, et celles qui portent un objet montrent tour à tour les textures
+     * que les animations utiliseront. Le délai passé, le modèle se déploie en quelques ticks, textures prêtes.
+     */
+    private void preload(int now) {
+        for (Iterator<Map.Entry<UUID, Integer>> it = preloading.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<UUID, Integer> entry = it.next();
+            Player viewer = shown.get(entry.getKey());
+            if (viewer == null) {
+                it.remove();
+                continue;
+            }
+            int elapsed = now - entry.getValue();
+            if (elapsed >= preloadTicks) {
+                it.remove();
+                List<PacketWrapper<?>> packets = new ArrayList<>(ids.length);
+                for (int i = 0; i < ids.length; i++) {
+                    Affine affine = placed(poses[i], frame);
+                    List<EntityData<?>> data = new ArrayList<>(7);
+                    data.add(new EntityData<>(Part.INTERPOLATION_DELAY, EntityDataTypes.INT, 0));
+                    data.add(new EntityData<>(Part.TRANSFORMATION_DURATION, EntityDataTypes.INT, REVEAL_TICKS));
+                    // État courant de la pièce : les images clés envoyées aux autres pendant le délai ne l'ont pas été ici
+                    data.add(new EntityData<>(Part.TRANSLATION, EntityDataTypes.VECTOR3F, vector(affine.translation())));
+                    data.add(new EntityData<>(Part.LEFT_ROTATION, EntityDataTypes.QUATERNION, quaternion(affine.left())));
+                    data.add(new EntityData<>(Part.SCALE, EntityDataTypes.VECTOR3F, vector(affine.scale())));
+                    if (hosts.contains(i) && !laterLooks.isEmpty()) {
+                        data.add(looks[i]);
+                    }
+                    packets.add(new WrapperPlayServerEntityMetadata(ids[i], data));
+                }
+                Packets.send(viewer, packets);
+                continue;
+            }
+            if (elapsed < 1 || elapsed % PRELOAD_STEP_TICKS != 1) {
+                continue;
+            }
+            int first = (elapsed / PRELOAD_STEP_TICKS) * hosts.size();
+            if (first >= laterLooks.size()) {
+                continue;
+            }
+            List<PacketWrapper<?>> packets = new ArrayList<>(hosts.size());
+            for (int h = 0; h < hosts.size() && first + h < laterLooks.size(); h++) {
+                packets.add(new WrapperPlayServerEntityMetadata(ids[hosts.get(h)], List.of(laterLooks.get(first + h))));
+            }
+            Packets.send(viewer, packets);
+        }
+    }
+
+    /** Toutes les métadonnées d'une pièce, pour son apparition ; « tiny » : réduite à un point (préchargement). */
+    private List<EntityData<?>> fullData(int index, boolean tiny) {
         Part part = type.parts().get(index);
         List<EntityData<?>> data = new ArrayList<>(part.staticData().size() + 8);
         data.addAll(part.staticData());
@@ -447,7 +535,8 @@ public final class Pet {
         Affine affine = placed(poses[index], frame);
         data.add(new EntityData<>(Part.TRANSLATION, EntityDataTypes.VECTOR3F, vector(affine.translation())));
         data.add(new EntityData<>(Part.LEFT_ROTATION, EntityDataTypes.QUATERNION, quaternion(affine.left())));
-        data.add(new EntityData<>(Part.SCALE, EntityDataTypes.VECTOR3F, vector(affine.scale())));
+        data.add(new EntityData<>(Part.SCALE, EntityDataTypes.VECTOR3F,
+            vector(tiny ? new Vector3f(affine.scale()).mul(PRELOAD_SCALE) : affine.scale())));
         data.add(new EntityData<>(Part.RIGHT_ROTATION, EntityDataTypes.QUATERNION, quaternion(affine.right())));
         return data;
     }
@@ -732,6 +821,10 @@ public final class Pet {
             return;
         }
         for (Player viewer : shown.values()) {
+            // Modèle encore réduit à un point chez ce joueur : il recevra l'état courant en se déployant
+            if (!preloading.isEmpty() && preloading.containsKey(viewer.getUniqueId())) {
+                continue;
+            }
             List<PacketWrapper<?>> packets = new ArrayList<>(updates.size());
             for (int n = 0; n < updates.size(); n++) {
                 packets.add(new WrapperPlayServerEntityMetadata(entities[n], updates.get(n)));

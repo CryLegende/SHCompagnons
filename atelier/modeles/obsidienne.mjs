@@ -20,7 +20,7 @@ export default {
         eclat('e3', 1.6, [0, -0.6, -6.6], [35, 20, 50], sombre),
     ],
     clips: [
-        { loop: 96, keys: [1, 2, 3, 4, 5].map((k) => ({ t: 16 * k, groups: { orbite: { rot: [0, 60 * k, 0] } } })) },
+        { loop: 96, lineaire: true, keys: [1, 2, 3, 4, 5].map((k) => ({ t: 16 * k, groups: { orbite: { rot: [0, 60 * k, 0] } } })) },
         cycle(['coeur'], TETES.Obsidienne),
     ],
     frames: [0, 8, 16, 32, 48, 64, 83, 100],

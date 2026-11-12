@@ -14,7 +14,7 @@ const PLUGIN = join(HERE, '..');
 const CP = [PLUGIN + '/target/classes', join(homedir(), '.m2/repository/org/joml/joml/1.10.8/joml-1.10.8.jar'),
     join(homedir(), '.m2/repository/com/github/retrooper/packetevents-api/2.14.0/packetevents-api-2.14.0.jar')].join(';');
 // images clés par tick de l'animation du compagnon entier (Animation.java)
-const WHOLE = { NONE: 0, BOUNCING: 4 / 22, GLIDE: 6 / 70, GLIDE_WOBBLE: 1 / 10, WOBBLE_SIDE: 8 / 126, SPIN: 10 / 80 };
+const WHOLE = { NONE: 0, FLOAT: 6 / 100, BOUNCING: 4 / 22, GLIDE: 6 / 70, GLIDE_WOBBLE: 1 / 10, WOBBLE_SIDE: 8 / 126, SPIN: 10 / 80 };
 
 const pets = [];
 let current = null;

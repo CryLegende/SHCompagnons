@@ -21,10 +21,10 @@ const def = chibi({
     leg: pantalon('j', 'J', 's'),
     arm: { rot: [0, 0, 8] },
     clips: [
-        { loop: 70, keys: [salut(36, 8), salut(42, 152), salut(46, 122), salut(50, 152), salut(54, 122), salut(58, 152), salut(65, 8)] },
-        { loop: 70, keys: [{ t: 38 }, { t: 44, groups: { tete: { rot: [0, 0, -8] } } }, { t: 58, groups: { tete: { rot: [0, 0, -8] } } }, { t: 64 }] },
+        { loop: 120, keys: [salut(70, 8), salut(78, 152), salut(83, 124), salut(88, 152), salut(93, 124), salut(98, 152), salut(108, 8)] },
+        { loop: 120, keys: [{ t: 72 }, { t: 80, groups: { tete: { rot: [0, 0, -8] } } }, { t: 98, groups: { tete: { rot: [0, 0, -8] } } }, { t: 106 }] },
     ],
-    frames: [0, 39, 42, 46, 50, 61],
+    frames: [0, 74, 78, 83, 88, 103],
 });
 def.clips.push(clin(def, 'tete', { 4: 'hHHhhHHh' }, 109));
 export default def;

@@ -20,7 +20,7 @@ export default {
         { id: 'coeur', group: 'tout', size: [5.4, 5.4, 5.4], pos: [0, 4, 0], skin: { all: 'c', sides: ['cocccocc', 'ccccCccc', 'cCcccccc', 'ccccocCc', 'occccccc', 'cccCcccc', 'ccocccoc', 'CccccCcc'], top: 'o', bottom: 'C', noise: 0.08 } },
     ],
     clips: [
-        { loop: 36, keys: [pose(4, 0, 0, [1.12, 0.8, 1.12]), pose(10, 9, 1.5), pose(16, 0.6, 0.6), pose(19, 0, 0, [1.18, 0.74, 1.18]), pose(23, 0, 0)] },
+        { loop: 58, lineaire: true, keys: [pose(4, 0, 0, [1.12, 0.8, 1.12]), pose(10, 9, 1.5), pose(16, 0.6, 0.6), pose(19, 0, 0, [1.18, 0.74, 1.18]), pose(23, 0, 0)] },
     ],
     frames: [0, 4, 7, 10, 13, 16, 19, 23],
 };

@@ -11,7 +11,7 @@ const danse = (t, k) => ({ t, groups: { tete: { rot: [0, 0, 13 * k] }, aileG: { 
 export default {
     name: 'perroquet',
     title: 'Perroquet',
-    scale: 0.46,
+    scale: 0.52,
     palette: { r: '#d92b2e', R: '#b01f25', y: '#f3c531', Y: '#d9a41f', b: '#2f66cc', B: '#234e9e', w: '#f4d9cb', k: { c: '#1b1414', n: 0.01 }, e: { c: '#ffffff', n: 0 }, n: '#3d3938', N: '#262323', m: '#5a5553', g: '#77716c' },
     groups: { aileG, aileD: mirroredGroup(aileG), tete: { pivot: [0, 8.2, 0.4] } },
     parts: [
@@ -26,7 +26,7 @@ export default {
         patte, mirrored(patte, 'patteD'),
     ],
     clips: [
-        { loop: 20, keys: [danse(5, 1), danse(15, -1)] },
+        { loop: 100, keys: [danse(8, 1), danse(22, -1), danse(36, 1), danse(50, -1), { t: 60 }] },
     ],
-    frames: [0, 5, 10, 15],
+    frames: [0, 8, 22, 36, 50],
 };

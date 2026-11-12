@@ -16,7 +16,7 @@ const agiter = (t, a) => ({ t, groups: { brasG: { rot: [0, 0, a] }, brasD: { rot
 export default {
     name: 'cookie',
     title: 'Cookie',
-    scale: 0.46,
+    scale: 0.5,
     palette: { d: '#d99a52', D: '#b97b3a', l: '#e9b770', C: '#5d3722', n: { c: '#1b1513', n: 0.04 }, w: { c: '#ffffff', n: 0 }, k: { c: '#1b1513', n: 0 }, m: { c: '#3b1f14', n: 0.02 }, r: { c: '#d6453f', n: 0.02 } },
     groups: { brasG, brasD: mirroredGroup(brasG) },
     parts: [
@@ -29,7 +29,7 @@ export default {
     ],
     clips: [
         { loop: 127, keys: [{ t: 120, parts: { visage: { skin: visage('dddddddd', 'dkkddkkd') } } }, { t: 125 }] },
-        { loop: 20, keys: [agiter(5, -40), agiter(15, -10)] },
+        { loop: 80, keys: [agiter(6, -42), agiter(14, -8), agiter(22, -42), agiter(30, -8), { t: 38 }] },
     ],
-    frames: [0, 5, 10, 15, 121],
+    frames: [0, 6, 14, 22, 30, 121],
 };

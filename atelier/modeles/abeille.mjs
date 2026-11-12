@@ -3,7 +3,7 @@ import { clin } from './_aides.mjs';
 const def = {
     name: 'abeille',
     title: 'Abeille',
-    scale: 0.42,
+    scale: 0.45,
     palette: {
         j: '#f2b62a', J: '#e09a1c', o: '#f7cf55',     // jaune, jaune sombre, jaune clair
         n: '#3a2a22', N: '#2a1d18',                    // brun-noir des rayures

@@ -46,6 +46,23 @@ node atelier.mjs --planche=anim sortie/canard:0.58:180:0,10,20,30
 
 `rigs.mjs` décrit pour chaque modèle des groupes de pièces (numéros, pivot) et des poses (rotation, déplacement d'un groupe). Le dessin d'origine n'est pas modifié. Après le nom d'un modèle importé : échelle, orientation (`placement.rotation.y` + 10) et ticks à montrer.
 
+## Mouvements adoucis et pauses
+
+Le client va en ligne droite et à vitesse constante d'une pose à la suivante. Pour qu'un mouvement parte et arrive en douceur, `kit.mjs` et `animer.mjs` ajoutent des poses intermédiaires dont l'avancée suit une courbe en S, dès qu'un mouvement dure 8 ticks (`lineaire: true` sur une animation ou `sec: true` sur une pose gardent le trajet droit : orbite, saut). Une animation joue son mouvement puis laisse le modèle au repos jusqu'à la fin de son cycle : la dernière pose ramène à la pose de base bien avant `loop`.
+
+## Tailles et icônes
+
+```text
+node tailles.mjs --cible 0.26     taille en jeu de chaque compagnon et échelle qui lui donnerait ce « corps »
+node planche.mjs --echelles       reporte dans config.yml l'échelle des fichiers de modeles/, puis refait les planches
+node icone.mjs shiba:0            texture d'une pièce, à utiliser comme icône (menu, box)
+node icone.mjs herisson:1:nx      même chose avec une autre face mise devant (peau à téléverser d'abord)
+```
+
+Le « corps » est le côté du cube de même volume que les pièces du modèle : viser 0,23 à 0,27 bloc pour que les compagnons restent comparables.
+
+Un modèle réservé à un évènement porte son nom en préfixe (`halloween_araignee`, `paques_canard`, `ete_ananas`).
+
 ## Coût réseau
 
 ```text

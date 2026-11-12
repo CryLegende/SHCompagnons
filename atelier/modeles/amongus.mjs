@@ -11,7 +11,7 @@ const couleurs = { loop: 100, keys: [1, 2, 3, 4].map((i) => ({ t: 20 * i, parts:
 export default {
     name: 'amongus',
     title: 'Among Us',
-    scale: 0.52,
+    scale: 0.6,
     palette: { v: '#9ad5ea', V: '#5fa3bf', e: { c: '#f4fbfe', n: 0 }, n: '#2c4a57' },
     parts: [
         { id: 'corps', size: [6, 6.2, 4.6], pos: [0, 5.6, 0], skin: tenues[0] },
@@ -21,8 +21,8 @@ export default {
         jambe, mirrored(jambe, 'jambeD'),
     ],
     clips: [
-        { loop: 16, keys: [pas(4, 1), pas(12, -1)] },
+        { loop: 84, keys: [pas(5, 1), pas(15, -1), pas(25, 1), pas(35, -1), pas(45, 1), pas(55, -1), { t: 60 }] },
         couleurs,
     ],
-    frames: [0, 4, 8, 12, 20, 40, 60, 80],
+    frames: [0, 5, 15, 25, 45, 65, 85, 105],
 };

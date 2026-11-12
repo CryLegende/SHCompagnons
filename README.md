@@ -100,9 +100,10 @@ Taille en jeu = taille d'origine × `placement.scale`. Pour comparer, une tête 
 ### Bon à savoir
 
 - **Placement** : le modèle est recentré tout seul ; `placement.offset` désigne la position de son centre, dans le repère du joueur décrit en tête de `config.yml`. Le déplacer dans l'aperçu du site ne change rien. Le tourner avant **Get the command** change bien la commande.
-- **Animations** : celles de BDEngine ne sont pas reprises. Seule la pose du modèle compte ; le mouvement du compagnon vient de `animation` (`GLIDE`, `BOUNCING`, `SPIN`…) et, pour ses pièces, des poses du fichier de modèle ([Animer les pièces d'un modèle](#animer-les-pièces-dun-modèle)).
+- **Animations** : celles de BDEngine ne sont pas reprises. Seule la pose du modèle compte ; le mouvement du compagnon vient de `animation` (`FLOAT`, `GLIDE`, `BOUNCING`, `SPIN`…) et, pour ses pièces, des poses du fichier de modèle ([Animer les pièces d'un modèle](#animer-les-pièces-dun-modèle)).
 - **Modèles refusés** : un modèle dont une entité s'étend sur plus de 64 blocs. Certains modèles du site étirent une tête sur des milliers de blocs pour n'en montrer qu'une face (plans transparents) ; ils ne peuvent pas servir de compagnon.
 - **Coût** : chaque entité du modèle est envoyée à chaque joueur qui voit le compagnon, puis chacune reçoit un paquet quand le propriétaire tourne la tête et à chaque image clé de l'animation. Un modèle de 10 entités coûte donc 10 fois une tête seule, en permanence. Limite : `companion_settings.max_model_parts` (12 par défaut), au-delà le compagnon est refusé au chargement. Viser 8 ou moins.
+- **Préchargement** : un client télécharge la texture d'une tête la première fois qu'il l'affiche et montre une tête par défaut en attendant. Le compagnon apparaît donc d'abord réduit à un point pendant `companion_settings.preload_ticks` (12), le temps de télécharger ses textures et celles que ses animations afficheront, puis se déploie.
 - **Repos** : quand le propriétaire n'a ni bougé ni tourné la tête depuis `companion_settings.rest_after_seconds` (30), son compagnon revient à sa position neutre et arrête son animation ; il repart au premier mouvement. Un joueur absent ne coûte alors plus aucun paquet.
 - **Sens** : le modèle doit regarder vers +z, l'avant du joueur. Beaucoup de modèles du site regardent vers -z ou -x : corriger avec `placement.rotation.y` (180 ou 90).
 - **Modèles fournis** : ceux du jar (dossier `models/`) sont copiés dans `plugins/SHCompagnons/models/` quand ils y manquent, jamais remplacés. Pour reprendre un modèle fourni après une mise à jour, supprimer son fichier.
@@ -149,8 +150,8 @@ Après sa pose de base, un fichier de modèle peut décrire des animations : le 
 
 | Modèles | Origine |
 |---|---|
-| `abeille`, `alex`, `amongus`, `ananas`, `bebe_yoda`, `bonhomme_de_neige`, `cochon`, `cookie`, `ghast`, `ghast_joyeux`, `jeb`, `lapin`, `nounours`, `obsidienne`, `panda`, `perroquet`, `r2d2`, `sculk`, `slime`, `slime_bleu`, `slime_choco`, `slime_dore`, `steve`, `tortue`, `villageois`, `zombie` | Faits pour SkyHand : pièces, textures et animations décrites dans [`atelier/modeles/`](atelier/modeles/). |
-| `araignee`, `cadeau`, `canard`, `champignon`, `elephant`, `golem_cuivre`, `herisson`, `manchot`, `ornithorynque`, `panda_roux`, `poulet`, `shiba`, `teckel` | [block-display.com](https://block-display.com/browse) ; auteur, lien et licence en tête de chaque fichier. Leur animation de repos est ajoutée par [`atelier/rigs.mjs`](atelier/rigs.mjs), sans toucher au dessin. |
+| `abeille`, `alex`, `amongus`, `bebe_yoda`, `bonhomme_de_neige`, `cochon`, `cookie`, `ete_ananas`, `ghast`, `ghast_joyeux`, `jeb`, `lapin`, `nounours`, `obsidienne`, `panda`, `perroquet`, `r2d2`, `sculk`, `slime`, `slime_bleu`, `slime_choco`, `slime_dore`, `steve`, `tortue`, `villageois`, `zombie` | Faits pour SkyHand : pièces, textures et animations décrites dans [`atelier/modeles/`](atelier/modeles/). |
+| `cadeau`, `champignon`, `elephant`, `golem_cuivre`, `halloween_araignee`, `herisson`, `manchot`, `ornithorynque`, `panda_roux`, `paques_canard`, `poulet`, `shiba`, `teckel` | [block-display.com](https://block-display.com/browse) ; auteur, lien et licence en tête de chaque fichier. Leur animation de repos est ajoutée par [`atelier/rigs.mjs`](atelier/rigs.mjs), sans toucher au dessin. |
 
 L'[atelier](atelier/README.md) fabrique ces modèles, les rend en image tels que le plugin les lit et chiffre leur coût réseau.
 

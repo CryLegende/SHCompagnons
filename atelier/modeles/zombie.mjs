@@ -19,7 +19,7 @@ export default chibi({
     leg: pantalon('j', 'J', 's'),
     arm: { rot: [-88, 0, 0] },
     clips: [
-        { loop: 40, keys: [pas(10, -98, -78, 7), pas(30, -78, -98, -7)] },
+        { loop: 90, keys: [pas(12, -98, -78, 7), pas(36, -78, -98, -7), { t: 50 }] },
     ],
-    frames: [0, 10, 20, 30],
+    frames: [0, 12, 24, 36],
 });

@@ -14,6 +14,8 @@ public enum Animation {
     BOUNCING(22, 0),
     /** Montée et descente lentes (70 ticks, 6 images clés). */
     GLIDE(70, 70.0 / 6),
+    /** Flottement très léger : le compagnon monte de quelques centimètres et revient, sans descendre (100 ticks, 6 images clés). */
+    FLOAT(100, 100.0 / 6),
     /** GLIDE avec un balancement de côté. */
     GLIDE_WOBBLE(630, 10),
     /** Balancement de côté (126 ticks, 8 images clés). */
@@ -80,6 +82,7 @@ public enum Animation {
                 yield new Frame(new Vector3f(0, y * amplitude, 0), 0);
             }
             case GLIDE -> new Frame(new Vector3f(0, glide(local) * amplitude, 0), 0);
+            case FLOAT -> new Frame(new Vector3f(0, (float) (0.035 * (1 - Math.cos(2 * Math.PI * local / 100.0))) * amplitude, 0), 0);
             case WOBBLE_SIDE -> new Frame(new Vector3f(wobble(local) * amplitude, 0, 0), 0);
             case GLIDE_WOBBLE -> new Frame(new Vector3f(wobble(local) * amplitude, glide(local) * amplitude, 0), 0);
             case SPIN -> new Frame(new Vector3f(), (float) (360.0 * local / cycle));

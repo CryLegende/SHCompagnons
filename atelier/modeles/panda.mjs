@@ -8,7 +8,7 @@ const oreille = { id: 'oreilleG', group: 'tete', size: [2.5, 2.3, 1.5], pos: [3.
 const def = {
     name: 'panda',
     title: 'Panda',
-    scale: 0.36,
+    scale: 0.42,
     palette: { w: '#f3f3ee', W: '#dcdcd4', n: '#2c2c2e', N: '#1c1c1e', g: '#4a4a4e', k: { c: '#101012', n: 0 }, e: { c: '#ffffff', n: 0 }, v: '#77b23a', V: '#5a8f2a', f: '#9bd04f', p: '#f0b4b8' },
     groups: { manger: { pivot: [0, 7, 1] }, tete: { pivot: [0, 8, 0] } },
     parts: [
@@ -20,9 +20,9 @@ const def = {
         { id: 'bambou', group: 'manger', size: [1.2, 9.4, 1.2], pos: [0.2, 7.4, 5], rot: [0, 0, 52], skin: { all: 'v', sides: ['vvvvvvvv', 'vvvvvvvv', 'VVVVVVVV', 'vvvvvvvv', 'vvvvvvvv', 'VVVVVVVV', 'vvvvvvvv', 'vvvvvvvv'], top: 'f', bottom: 'V' } },
     ],
     clips: [
-        { loop: 44, keys: [{ t: 5, groups: { manger: { move: [0, 1, 0] }, tete: { rot: [8, 0, 0] } } }, { t: 10 }, { t: 15, groups: { manger: { move: [0, 1, 0] }, tete: { rot: [8, 0, 0] } } }, { t: 20 }] },
+        { loop: 70, keys: [{ t: 6, groups: { manger: { move: [0, 1, 0] }, tete: { rot: [8, 0, 0] } } }, { t: 12 }, { t: 18, groups: { manger: { move: [0, 1, 0] }, tete: { rot: [8, 0, 0] } } }, { t: 24 }] },
     ],
-    frames: [0, 5, 10, 15, 20],
+    frames: [0, 3, 6, 12, 18],
 };
 def.clips.push(clin(def, 'tete', { 3: 'wnnwwnnw' }, 107));
 export default def;

@@ -51,7 +51,8 @@ public class ConfigManager {
         boolean showToOwnerWhenInvisible,
         boolean freezeTurnWhenSneaking,
         int sneakResumeTicks,
-        int joinDelayTicks
+        int joinDelayTicks,
+        int preloadTicks
     ) {
     }
 
@@ -180,7 +181,8 @@ public class ConfigManager {
             section.getBoolean("show_to_owner_when_invisible", true),
             section.getBoolean("turn.freeze_when_sneaking", true),
             Math.max(0, section.getInt("turn.resume_smoothing_ticks", 8)),
-            Math.max(1, section.getInt("join_delay_ticks", 20)));
+            Math.max(1, section.getInt("join_delay_ticks", 20)),
+            Math.max(0, Math.min(60, section.getInt("preload_ticks", 12))));
     }
 
     /** Placement d'une section (absente : les valeurs par défaut) ; chaque clé absente garde la valeur par défaut. */

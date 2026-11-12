@@ -37,7 +37,7 @@ const pencher = (t, a, e) => ({ t, groups: { tete: { rot: [0, 0, a] }, oreilleG:
 const def = {
     name: 'jeb',
     title: 'Jeb le mouton',
-    scale: 0.42,
+    scale: 0.46,
     palette: { s: '#e2c4a8', S: '#c9a98c', p: '#eaa7a6', h: '#5d4a3f', H: '#46362e', k: { c: '#1c1614', n: 0 }, e: { c: '#ffffff', n: 0 }, n: '#e58f93' },
     groups: { tete: { pivot: [0, 6.4, 3.4] }, oreilleG, oreilleD: mirroredGroup(oreilleG) },
     parts: [

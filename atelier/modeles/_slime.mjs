@@ -12,7 +12,7 @@ export function slime(name, title, skins, glass) {
             { id: 'gelee', group: 'tout', block: glass, size: [8, 8, 8], pos: [0, 4, 0] },
         ],
         clips: [
-            { loop: 34, keys: [hop(4, [1.15, 0.75, 1.15], 0), hop(10, [0.92, 1.12, 0.92], 9), hop(16, [0.92, 1.12, 0.92], 0.8), hop(19, [1.2, 0.7, 1.2], 0), hop(23, [1, 1, 1], 0)] },
+            { loop: 56, lineaire: true, keys: [hop(4, [1.15, 0.75, 1.15], 0), hop(10, [0.92, 1.12, 0.92], 9), hop(16, [0.92, 1.12, 0.92], 0.8), hop(19, [1.2, 0.7, 1.2], 0), hop(23, [1, 1, 1], 0)] },
             ...(skins.length > 1 ? [cycle(['coeur'], skins)] : []),
         ],
         frames: [0, 4, 7, 10, 13, 16, 19, 23],

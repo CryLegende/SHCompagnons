@@ -9,7 +9,7 @@ const oreille = { id: 'oreilleG', size: [2.5, 2.5, 1.3], pos: [3, 12.6, 0], skin
 const def = {
     name: 'nounours',
     title: 'Nounours',
-    scale: 0.42,
+    scale: 0.47,
     palette: { b: '#8f5d3a', D: '#6d4428', l: '#cfa06e', r: '#c8323a', R: '#9c2029', k: { c: '#1f1512', n: 0.01 }, w: { c: '#ffffff', n: 0 } },
     groups: { brasG, brasD: mirroredGroup(brasG) },
     parts: [
@@ -21,7 +21,7 @@ const def = {
         jambe, mirrored(jambe, 'jambeD'),
     ],
     clips: [
-        { loop: 70, keys: [{ t: 30 }, { t: 36, groups: { brasG: { rot: [0, 0, 150] } } }, { t: 40, groups: { brasG: { rot: [0, 0, 118] } } }, { t: 44, groups: { brasG: { rot: [0, 0, 150] } } }, { t: 48, groups: { brasG: { rot: [0, 0, 118] } } }, { t: 52, groups: { brasG: { rot: [0, 0, 150] } } }, { t: 60 }] },
+        { loop: 110, keys: [{ t: 30 }, { t: 36, groups: { brasG: { rot: [0, 0, 150] } } }, { t: 40, groups: { brasG: { rot: [0, 0, 118] } } }, { t: 44, groups: { brasG: { rot: [0, 0, 150] } } }, { t: 48, groups: { brasG: { rot: [0, 0, 118] } } }, { t: 52, groups: { brasG: { rot: [0, 0, 150] } } }, { t: 60 }] },
     ],
     frames: [0, 33, 36, 40, 44, 56],
 };

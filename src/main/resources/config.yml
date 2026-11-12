@@ -180,6 +180,12 @@ companion_settings:
   # Délai avant d'afficher le compagnon d'un joueur qui se connecte (ticks)
   join_delay_ticks: 20
 
+  # Préchargement des textures (ticks). Un client télécharge la texture d'une tête la première fois qu'il l'affiche et
+  # montre une tête par défaut en attendant. Le compagnon apparaît donc d'abord réduit à un point pendant ce délai,
+  # le temps de télécharger ses textures et celles que ses animations afficheront, puis se déploie. Le délai s'allonge
+  # tout seul pour un modèle qui a beaucoup de textures successives. 0 : le compagnon apparaît aussitôt.
+  preload_ticks: 12
+
 # Compagnons. La clé (ex : ghast) est celle de /shcompagnons set <joueur> <clé>.
 #
 #   displayname           nom affiché (codes couleur &)
@@ -190,8 +196,9 @@ companion_settings:
 #   model                 modèle importé, à la place d'une tête : nom du fichier de models/ sans l'extension
 #                         (voir « Importer un modèle de block-display.com » en haut du fichier) ; il peut porter ses
 #                         propres animations (voir « Animer les pièces d'un modèle »)
-#   animation             NONE, BOUNCING (rebond), GLIDE (montée et descente lentes), WOBBLE_SIDE (balancement),
-#                         GLIDE_WOBBLE (les deux), SPIN (tour sur lui-même)
+#   animation             NONE, FLOAT (flottement très léger, sans descendre), GLIDE (montée et descente lentes),
+#                         BOUNCING (rebond), WOBBLE_SIDE (balancement), GLIDE_WOBBLE (glide + balancement),
+#                         SPIN (tour sur lui-même)
 #   animation_speed       vitesse de l'animation (1 = normale, 2 = deux fois plus rapide)
 #   animation_amplitude   ampleur des mouvements de l'animation (1 = normale)
 #   follow                ATTACHED ou FREE (voir companion_settings)
@@ -208,15 +215,13 @@ companion_settings:
 pets:
   ghast:
     displayname: "Ghast"
-    animation: GLIDE
+    animation: FLOAT
     model: ghast
     placement:
-      scale: 0.52
+      scale: 0.5
   happy_ghast:
     displayname: "Happy Ghast !"
-    animation: GLIDE
-    animation_speed: 0.75
-    animation_amplitude: 0.6
+    animation: FLOAT
     model: ghast_joyeux
     placement:
       scale: 0.5
@@ -234,29 +239,25 @@ pets:
       scale: 0.6
   Zombie:
     displayname: "Zombie"
-    animation: GLIDE
-    animation_amplitude: 0.5
+    animation: FLOAT
     model: zombie
     placement:
-      scale: 0.38
+      scale: 0.42
   cochon:
     displayname: "Cochon"
-    animation: GLIDE
-    animation_speed: 0.75
-    animation_amplitude: 0.5
+    animation: FLOAT
     model: cochon
     placement:
       scale: 0.46
   Abeille:
     displayname: "Abeille"
-    animation: GLIDE
-    animation_amplitude: 0.6
+    animation: FLOAT
     model: abeille
     placement:
-      scale: 0.42
+      scale: 0.45
   Manchot:
     displayname: "Manchot"
-    animation: BOUNCING
+    animation: FLOAT
     model: manchot
     placement:
       rotation:
@@ -264,14 +265,13 @@ pets:
       scale: 0.6
   Perroquet:
     displayname: "Perroquet"
-    animation: GLIDE
-    animation_amplitude: 0.5
+    animation: FLOAT
     model: perroquet
     placement:
-      scale: 0.46
+      scale: 0.52
   Poulet:
     displayname: "Poulet"
-    animation: BOUNCING
+    animation: FLOAT
     model: poulet
     placement:
       rotation:
@@ -279,58 +279,52 @@ pets:
       scale: 0.5
   Obsidienne:
     displayname: "Obsidienne"
-    animation: GLIDE
+    animation: FLOAT
     model: obsidienne
     placement:
       scale: 0.56
   AmongUs:
     displayname: "Among Us Rouge"
-    animation: GLIDE
-    animation_amplitude: 0.5
+    animation: FLOAT
     model: amongus
     placement:
-      scale: 0.52
+      scale: 0.6
   Steve:
     displayname: "Steve"
-    animation: GLIDE
-    animation_amplitude: 0.5
+    animation: FLOAT
     model: steve
     placement:
-      scale: 0.38
+      scale: 0.42
   Alex:
     displayname: "Alex"
-    animation: GLIDE
-    animation_amplitude: 0.5
+    animation: FLOAT
     model: alex
     placement:
-      scale: 0.38
+      scale: 0.42
   Villageois:
     displayname: "Villageois"
-    animation: GLIDE
-    animation_amplitude: 0.5
+    animation: FLOAT
     model: villageois
     placement:
-      scale: 0.38
+      scale: 0.42
   R2-D2:
     displayname: "R2-D2"
-    animation: NONE
+    animation: FLOAT
     model: r2d2
     placement:
-      scale: 0.44
+      scale: 0.5
   Bebe_Yoda:
     displayname: "Bébé Yoda"
-    animation: GLIDE
-    animation_amplitude: 0.6
+    animation: FLOAT
     model: bebe_yoda
     placement:
-      scale: 0.44
+      scale: 0.48
   Nounours:
     displayname: "Nounours"
-    animation: GLIDE
-    animation_amplitude: 0.5
+    animation: FLOAT
     model: nounours
     placement:
-      scale: 0.42
+      scale: 0.47
   Slime_Dore:
     displayname: "Slime Doré"
     animation: NONE
@@ -339,25 +333,22 @@ pets:
       scale: 0.6
   Panda:
     displayname: "Panda"
-    animation: GLIDE
-    animation_amplitude: 0.5
+    animation: FLOAT
     model: panda
     placement:
-      scale: 0.36
+      scale: 0.42
   Sculk:
     displayname: "Sculk"
-    animation: GLIDE
-    animation_amplitude: 0.6
+    animation: FLOAT
     model: sculk
     placement:
-      scale: 0.58
+      scale: 0.55
   Tortue:
     displayname: "Tortue"
-    animation: GLIDE
-    animation_amplitude: 0.7
+    animation: FLOAT
     model: tortue
     placement:
-      scale: 0.4
+      scale: 0.46
   Slime_Choco:
     displayname: "Slime en Chocolat"
     animation: NONE
@@ -366,28 +357,25 @@ pets:
       scale: 0.6
   Jeb:
     displayname: "Jeb le mouton"
-    animation: NONE
+    animation: FLOAT
     model: jeb
     placement:
-      scale: 0.42
+      scale: 0.46
   Cookie:
     displayname: "Cookie"
-    animation: GLIDE
-    animation_amplitude: 0.5
+    animation: FLOAT
     model: cookie
     placement:
-      scale: 0.46
+      scale: 0.5
   Bonhomme_de_Neige:
     displayname: "Bonhomme de Neige"
-    animation: GLIDE
-    animation_speed: 0.75
-    animation_amplitude: 0.5
+    animation: FLOAT
     model: bonhomme_de_neige
     placement:
-      scale: 0.4
+      scale: 0.42
   Pere_Noel:
     displayname: "Cadeau du Père Noël"
-    animation: BOUNCING
+    animation: FLOAT
     model: cadeau
     placement:
       rotation:
@@ -395,114 +383,94 @@ pets:
       scale: 0.5
   Lapin:
     displayname: "Lapin"
-    animation: BOUNCING
-    animation_speed: 0.8
+    animation: FLOAT
     model: lapin
     placement:
-      scale: 0.46
+      scale: 0.5
   Champignon:
     displayname: "Champignon"
-    animation: GLIDE
-    animation_speed: 0.75
-    animation_amplitude: 0.5
+    animation: FLOAT
     model: champignon
     placement:
       rotation:
         y: 170
-      scale: 0.9
-  Araignee:
-    displayname: "Araignée"
-    animation: GLIDE
-    animation_speed: 0.75
-    animation_amplitude: 0.4
-    model: araignee
-    placement:
-      rotation:
-        y: 170
-      scale: 0.28
+      scale: 0.8
   Elephant:
     displayname: "Éléphant"
-    animation: GLIDE
-    animation_speed: 0.75
-    animation_amplitude: 0.5
+    animation: FLOAT
     model: elephant
     placement:
       rotation:
         y: 170
-      scale: 0.28
+      scale: 0.33
   Ornithorynque:
     displayname: "Ornithorynque"
-    animation: GLIDE
-    animation_amplitude: 0.6
+    animation: FLOAT
     model: ornithorynque
     placement:
       rotation:
         y: 170
-      scale: 0.5
+      scale: 0.58
   Teckel:
     displayname: "Teckel"
-    animation: GLIDE
-    animation_speed: 0.75
-    animation_amplitude: 0.4
+    animation: FLOAT
     model: teckel
     placement:
       rotation:
         y: 170
-      scale: 0.3
+      scale: 0.36
   Shiba:
     displayname: "Shiba"
-    animation: GLIDE
-    animation_speed: 0.75
-    animation_amplitude: 0.4
+    animation: FLOAT
     model: shiba
+    placement:
+      rotation:
+        y: 170
+      scale: 0.42
+  Herisson:
+    displayname: "Hérisson"
+    animation: FLOAT
+    model: herisson
+    placement:
+      rotation:
+        y: 260
+      scale: 0.44
+  Golem_de_Cuivre:
+    displayname: "Golem de Cuivre"
+    animation: FLOAT
+    model: golem_cuivre
+    placement:
+      rotation:
+        y: 170
+      scale: 0.3
+  Panda_Roux:
+    displayname: "Panda Roux"
+    animation: FLOAT
+    model: panda_roux
+    placement:
+      rotation:
+        y: 170
+      scale: 0.4
+  # Compagnons d'évènement, hors box cosmétique : leur modèle porte le nom de l'évènement (halloween_, paques_, ete_)
+  Araignee:
+    displayname: "Araignée"
+    animation: FLOAT
+    model: halloween_araignee
     placement:
       rotation:
         y: 170
       scale: 0.36
   Canard:
     displayname: "Canard"
-    animation: GLIDE
-    animation_amplitude: 0.5
-    model: canard
+    animation: FLOAT
+    model: paques_canard
     placement:
       rotation:
         y: 170
-      scale: 0.58
-  Herisson:
-    displayname: "Hérisson"
-    animation: GLIDE
-    animation_speed: 0.75
-    animation_amplitude: 0.4
-    model: herisson
-    placement:
-      rotation:
-        y: 260
-      scale: 0.42
-  Golem_de_Cuivre:
-    displayname: "Golem de Cuivre"
-    animation: GLIDE
-    animation_speed: 0.75
-    animation_amplitude: 0.4
-    model: golem_cuivre
-    placement:
-      rotation:
-        y: 170
-      scale: 0.27
-  Panda_Roux:
-    displayname: "Panda Roux"
-    animation: GLIDE
-    animation_speed: 0.75
-    animation_amplitude: 0.4
-    model: panda_roux
-    placement:
-      rotation:
-        y: 170
-      scale: 0.29
+      scale: 0.56
   Ananas:
     displayname: "Ananas"
-    animation: GLIDE
-    animation_speed: 0.75
-    animation_amplitude: 0.5
-    model: ananas
+    animation: FLOAT
+    model: ete_ananas
     placement:
-      scale: 0.48
+      scale: 0.52
