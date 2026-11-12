@@ -34,13 +34,34 @@ public final class SummonImporter {
     private SummonImporter() {
     }
 
-    /**
-     * Découpe un texte en commandes : chaque ligne qui commence par summon ou /summon ouvre une commande, les lignes
-     * suivantes (hors commentaires #) la prolongent. Toute autre commande (/kill de la fenêtre d'export de
-     * block-display.com, etc.) termine la commande en cours et est ignorée.
-     */
+    /** Pose d'une animation : le modèle entier à cet instant du cycle (ticks), en commandes /summon. */
+    public record Pose(int tick, List<String> commands) {
+    }
+
+    /** Animation d'un modèle : durée du cycle (ticks) et poses successives, après la pose de base à l'instant 0. */
+    public record Clip(int loop, List<Pose> poses) {
+    }
+
+    /** Contenu d'un fichier de modèle : commandes de la pose de base, puis animations éventuelles. */
+    public record Source(List<String> base, List<Clip> clips) {
+    }
+
+    /** Commandes de la pose de base d'un fichier de modèle (les animations sont ignorées). */
     public static List<String> splitCommands(String content) {
-        List<String> commands = new ArrayList<>();
+        return split(content).base();
+    }
+
+    /**
+     * Découpe un fichier de modèle. Chaque ligne qui commence par summon ou /summon ouvre une commande, les lignes
+     * suivantes (hors commentaires #) la prolongent. Toute autre commande (/kill de la fenêtre d'export de
+     * block-display.com, etc.) termine la commande en cours et est ignorée. Les commandes placées avant la première
+     * ligne « @animation » forment la pose de base. « @animation loop=<ticks> » ouvre une animation, « @pose <tick> »
+     * une pose de cette animation : les commandes qui suivent décrivent le modèle entier à cet instant.
+     */
+    public static Source split(String content) {
+        List<String> base = new ArrayList<>();
+        List<Clip> clips = new ArrayList<>();
+        List<String> target = base;
         StringBuilder current = null;
         for (String line : content.split("\\R")) {
             String trimmed = line.trim();
@@ -48,10 +69,34 @@ public final class SummonImporter {
                 continue;
             }
             String lower = trimmed.toLowerCase(Locale.ROOT);
+            if (lower.startsWith("@")) {
+                if (current != null) {
+                    target.add(current.toString());
+                    current = null;
+                }
+                String[] words = lower.split("[\\s=]+");
+                if (words[0].equals("@animation")) {
+                    clips.add(new Clip(directiveNumber(words, "loop", trimmed), new ArrayList<>()));
+                    target = null;
+                } else if (words[0].equals("@pose")) {
+                    if (clips.isEmpty()) {
+                        throw new IllegalArgumentException("« " + trimmed + " » avant toute ligne @animation");
+                    }
+                    Pose pose = new Pose(directiveNumber(words, null, trimmed), new ArrayList<>());
+                    clips.getLast().poses().add(pose);
+                    target = pose.commands();
+                } else {
+                    throw new IllegalArgumentException("ligne inconnue « " + trimmed + " » (attendu : @animation loop=<ticks> ou @pose <tick>)");
+                }
+                continue;
+            }
             boolean summon = lower.startsWith("summon ") || lower.startsWith("/summon ") || lower.startsWith("minecraft:summon ");
             if (summon || isOtherCommand(lower)) {
                 if (current != null) {
-                    commands.add(current.toString());
+                    target.add(current.toString());
+                }
+                if (summon && target == null) {
+                    throw new IllegalArgumentException("commande /summon après @animation sans ligne @pose");
                 }
                 current = summon ? new StringBuilder(trimmed) : null;
             } else if (current != null) {
@@ -59,9 +104,26 @@ public final class SummonImporter {
             }
         }
         if (current != null) {
-            commands.add(current.toString());
+            target.add(current.toString());
         }
-        return commands;
+        return new Source(base, clips);
+    }
+
+    /** Nombre d'une ligne @ : « @pose 10 », « @animation loop=40 » ou « @animation loop 40 ». */
+    private static int directiveNumber(String[] words, String name, String line) {
+        int index = name == null ? 1 : java.util.Arrays.asList(words).indexOf(name) + 1;
+        try {
+            if (index < 1 || index >= words.length) {
+                throw new NumberFormatException();
+            }
+            int value = Integer.parseInt(words[index]);
+            if (value <= 0) {
+                throw new NumberFormatException();
+            }
+            return value;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("« " + line + " » : nombre de ticks positif attendu");
+        }
     }
 
     // Ligne qui commence une autre commande que summon (avec /, ou sans / comme dans un .mcfunction)

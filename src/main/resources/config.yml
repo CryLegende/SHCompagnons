@@ -47,8 +47,10 @@
 #   change rien, il est recentré.
 #   Même chose depuis BDEngine (bdengine.app, menu « Export to Minecraft »). Un fichier .yml de BlockDisplayCreator
 #   (display.spawn-command) se dépose tel quel dans models/, un .mcfunction avec des lignes summon aussi.
-#   Les animations de BDEngine ne sont pas reprises : seule la pose du modèle compte, le mouvement du compagnon vient
-#   de « animation ».
+#   Les animations de BDEngine ne sont pas reprises : seule la pose du modèle compte. Le mouvement du compagnon vient
+#   de « animation » et, pour ses pièces, des poses décrites plus bas (« Animer les pièces d'un modèle »).
+#   Un modèle dont une entité s'étend sur plus de 64 blocs est refusé : certains modèles du site étirent une tête sur
+#   des milliers de blocs pour n'en montrer qu'une face (plans transparents), ils ne peuvent pas servir de compagnon.
 #   Coût : chaque entité du modèle est envoyée à chaque joueur qui voit le compagnon, puis chacune reçoit un paquet
 #   à chaque fois que le propriétaire tourne la tête et à chaque image clé de l'animation. Un modèle de 10 entités
 #   coûte donc 10 fois une tête seule, en permanence. Limite : companion_settings.max_model_parts (12) ; au-delà,
@@ -57,9 +59,36 @@
 #   Sens : le modèle doit regarder vers +z (l'avant du joueur). Beaucoup de modèles du site regardent vers -z ou -x :
 #   corriger avec placement.rotation.y (180 ou 90), en plus des -10 du placement par défaut.
 #   Modèles fournis : ceux du jar (dossier models/) sont copiés dans plugins/SHCompagnons/models/ quand ils y
-#   manquent, jamais remplacés.
+#   manquent, jamais remplacés. Pour reprendre un modèle fourni après une mise à jour, supprimer son fichier.
 #   Licence : elle est indiquée sur la page du modèle. En BDL BY-NC (usage non commercial), demander à l'auteur avant
 #   de vendre ce compagnon en boutique.
+#
+# ----------------------------------------------------------------------------------------------------------------
+# Animer les pièces d'un modèle
+# ----------------------------------------------------------------------------------------------------------------
+#   Après sa pose de base, un fichier de modèle peut décrire des animations : le même modèle dans d'autres poses, à
+#   des instants donnés d'un cycle qui se répète. Seules les entités qui bougent ou changent de texture d'une pose à
+#   l'autre sont animées ; le client fait le trajet d'une pose à la suivante.
+#
+#     /summon block_display ~ ~ ~ {Passengers:[...]}     pose de base : instant 0 de chaque cycle, pose au repos
+#     @animation loop=40                                  une animation de 40 ticks, qui se répète
+#     @pose 10                                            le modèle entier à l'instant 10 (mêmes entités, même ordre)
+#     /summon block_display ~ ~ ~ {Passengers:[...]}
+#     @pose 30
+#     /summon block_display ~ ~ ~ {Passengers:[...]}
+#     @animation loop=120                                 une autre animation, à son propre rythme (un clignement...)
+#     @pose 114
+#     /summon block_display ~ ~ ~ {Passengers:[...]}
+#
+#   À la fin du cycle, le modèle revient à la pose de base. Une entité peut bouger dans une animation et changer de
+#   texture (ou de bloc) dans une autre. Depuis BDEngine : exporter le même projet dans chaque pose, sans ajouter ni
+#   retirer d'élément entre deux exports.
+#   Ces animations s'ajoutent à « animation » du compagnon (BOUNCING, GLIDE...) et s'arrêtent comme elle au repos.
+#   Un modèle qui fait déjà son saut dans ses poses (les slimes fournis) se déclare avec « animation: NONE ».
+#   Coût : un paquet par entité animée à chacune de ses poses, pour chaque joueur qui voit le compagnon ; une entité
+#   qui ne change pas dans une animation ne coûte rien. /shcompagnons models donne le nombre d'entités animées.
+#   Une transformation écrite en translation, left_rotation, scale, right_rotation s'anime mieux qu'une transformation
+#   en 16 nombres : le client anime ces quatre valeurs séparément.
 #
 # Un compagnon écrit dans pets mais inutilisable (modèle absent, trop lourd, illisible) n'est pas affiché, et le
 # choix des joueurs qui le portent reste en base : il revient dès que le modèle est réparé.
@@ -156,9 +185,11 @@ companion_settings:
 #   displayname           nom affiché (codes couleur &)
 #   skin                  texture d'une tête de joueur (valeur base64), compagnon = cette tête
 #   skins                 plusieurs textures affichées tour à tour : liste de textures, ou de « value » + « skin_update_interval »
-#   skin_update_interval  durée d'affichage de chaque texture (ticks), pour toute la liste
+#   skin_update_interval  durée d'affichage de chaque texture (ticks), pour toute la liste ; sans durée, la tête garde
+#                         sa première texture
 #   model                 modèle importé, à la place d'une tête : nom du fichier de models/ sans l'extension
-#                         (voir « Importer un modèle de block-display.com » en haut du fichier)
+#                         (voir « Importer un modèle de block-display.com » en haut du fichier) ; il peut porter ses
+#                         propres animations (voir « Animer les pièces d'un modèle »)
 #   animation             NONE, BOUNCING (rebond), GLIDE (montée et descente lentes), WOBBLE_SIDE (balancement),
 #                         GLIDE_WOBBLE (les deux), SPIN (tour sur lui-même)
 #   animation_speed       vitesse de l'animation (1 = normale, 2 = deux fois plus rapide)
@@ -178,66 +209,51 @@ pets:
   ghast:
     displayname: "Ghast"
     animation: GLIDE
-    skins: 
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvN2E4YjcxNGQzMmQ3ZjZjZjhiMzdlMjIxYjc1OGI5YzU5OWZmNzY2NjdjN2NkNDViYmM0OWM1ZWYxOTg1ODY0NiJ9fX0="
-        skin_update_interval: 400
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzhmNzdlZWVlZjZmZmIyZjY4MThlNTc2OTg3OTRhZTAzNTFhYjMyYmEyMzRkNjIxYzIyZmU0Y2U4ZTE1OTlkMiJ9fX0="
-        skin_update_interval: 20
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjUyMTlhZTJlYTZlMjljZThhZTcwNGE0YjkxNGNjYWFhZjQwODZkYjNjZjU2NGRjYjU0YjliYmZiMWFlM2NlYSJ9fX0="
-        skin_update_interval: 5
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMjU4ZTgwNGUwZDg1MGUzZWJmMGEyMTkzOWFhNTY3YzM0MjFkMzc2YzBhOTE1MWNjMzFhZDZhZGYxMjdlNTQwMCJ9fX0="
-        skin_update_interval: 2
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZmRkMGI5ZGZiZTZjNmY5MzdmZTAyMmQxMzliNzI5MGI4NWFkZjgxNTBkOTliMTVhNTNkODE5MzJlZjEyNTBkZiJ9fX0="
-        skin_update_interval: 2
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzhmNzdlZWVlZjZmZmIyZjY4MThlNTc2OTg3OTRhZTAzNTFhYjMyYmEyMzRkNjIxYzIyZmU0Y2U4ZTE1OTlkMiJ9fX0="
-        skin_update_interval: 5
+    model: ghast
+    placement:
+      scale: 0.52
   happy_ghast:
     displayname: "Happy Ghast !"
     animation: GLIDE
-    model: ghast_mignon
+    animation_speed: 0.75
+    animation_amplitude: 0.6
+    model: ghast_joyeux
     placement:
-      rotation:
-        y: 80
       scale: 0.5
-    # Avant le modèle (tête seule) :
-    # animation: BOUNCING
-    # skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTUxMTEwNjcxYzQ0YjY0NmFjOTc2ZmYyMTRhZjQ4NDk5NGUyMTBmMmNhYzQ4MWZjMTk3YWIwZjAxMWU2MWFhOSJ9fX0="
   Slime:
     displayname: "Slime"
-    animation: BOUNCING
-    skins: 
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODk1YWVlYzZiODQyYWRhODY2OWY4NDZkNjViYzQ5NzYyNTk3ODI0YWI5NDRmMjJmNDViZjNiYmI5NDFhYmU2YyJ9fX0="
-        skin_update_interval: 800
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTMzMGFmMTdmODUxMmVkM2I0OWU3OGJjYTdlZjJkODNmMmRjMWU1OThhOGNiNTQyZWNjM2I2YmVjZWU5ZjU3In19fQ=="
-        skin_update_interval: 80
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTFhYzJlNTQ4NjFiZDkyYTAwNjA5NWQ0MTkyYThkODcyNDhmOTRiNzg5ZDZmMGZlZTI3NzBlNTNkYmNmNmQ1ZCJ9fX0="
-        skin_update_interval: 30
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTU3NjBlZTk3Yzg4YWU2Nzc3YTcyYTE4NWM3YTgxZjA4ZmZiOTdiNTRiYzQxZjhkMzhiNTExMmU1YzU0NTc0NSJ9fX0="
-        skin_update_interval: 35
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjk5ODEzY2Y3OGMxMDExNGE2YTRkNmM3YTJkOWFjNmU1ZjM5YTIxM2RjYzkyNThkNTBjYjhiYTJkNGIwZmQ5ZCJ9fX0="
-        skin_update_interval: 40
+    animation: NONE
+    model: slime
+    placement:
+      scale: 0.6
   Slime_Bleu:
     displayname: "Slime Bleu (Limule ?)"
-    animation: BOUNCING
-    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzI4NWNhYTJjM2NiOGExZWE4ZjJmN2UyZWNhZWU0NGFmYjIxYzYyMjExZGVhNmZkM2MxMzdiMjJiYjg2NzM0ZiJ9fX0="
+    animation: NONE
+    model: slime_bleu
+    placement:
+      scale: 0.6
   Zombie:
     displayname: "Zombie"
-    animation: BOUNCING
-    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMDZhZWE2YWNhMWE4MWIyM2JkOGM1ZTUwOGZlNzY2NDhmYzJlNDFmYWExYzhmYzI2Y2ZhOGJkY2U0MTYzIn19fQ=="
+    animation: GLIDE
+    animation_amplitude: 0.5
+    model: zombie
+    placement:
+      scale: 0.38
   cochon:
     displayname: "Cochon"
-    animation: BOUNCING
+    animation: GLIDE
+    animation_speed: 0.75
+    animation_amplitude: 0.5
     model: cochon
     placement:
-      rotation:
-        y: 170
-      scale: 0.3
-    # Avant le modèle (tête seule) :
-    # skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWFmOGI1YWJkMjVjMjA5MmFjMDk2OTJiMTMyNWRmOWI2YzkwN2NkNWJkNTQ1ODdlOGFhM2E4MTUzY2ZlZCJ9fX0="
+      scale: 0.46
   Abeille:
     displayname: "Abeille"
-    animation: GLIDE_WOBBLE
-    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTlkYzNmMDBlY2FiMjI0OWJiNmExNmM4YzUxMTVjZWI5ZjIzMjA1YTBkNTVjYzBlOWJhYmQyNTYyZjc5NTljNCJ9fX0="
+    animation: GLIDE
+    animation_amplitude: 0.6
+    model: abeille
+    placement:
+      scale: 0.42
   Manchot:
     displayname: "Manchot"
     animation: BOUNCING
@@ -246,12 +262,13 @@ pets:
       rotation:
         y: 170
       scale: 0.6
-    # Avant le modèle (tête seule) :
-    # skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWVhNzU5Zjk3OWI5YjhlYTgzMWNhN2UyZDY2ZGYxNDgyOTNmMWE1MTQ3OTgzYjUyYzQ4ZWZlMmMzMTVlIn19fQ=="
   Perroquet:
     displayname: "Perroquet"
-    animation: BOUNCING
-    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzA3ZGFiMmNiZWJlYTUzOWI2NGQ1YWQyNDZmOWNjYzFmY2RhN2FhOTRiODhlNTlmYzI4Mjk4NTJmNDYwNzEifX19"
+    animation: GLIDE
+    animation_amplitude: 0.5
+    model: perroquet
+    placement:
+      scale: 0.46
   Poulet:
     displayname: "Poulet"
     animation: BOUNCING
@@ -260,170 +277,114 @@ pets:
       rotation:
         y: 170
       scale: 0.5
-    # Avant le modèle (tête seule) :
-    # skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvN2YzN2Q1MjRjM2VlZDE3MWNlMTQ5ODg3ZWExZGVlNGVkMzk5OTA0NzI3ZDUyMTg2NTY4OGVjZTNiYWM3NWUifX19"
   Obsidienne:
     displayname: "Obsidienne"
     animation: GLIDE
-    skins: 
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYWJhOTY0N2VjN2M4ZjM1OWQ4ZDA5NTJiZGJmNzJjYmI0YjU3NDNjZjg0NTVkY2I3NjY0ZTJiZjliZGY4YjcxOCJ9fX0="
-        skin_update_interval: 80
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmJjMDgxMWM0NWMzNmVmNDNiMDBhMmY5NzMyOGI5MGRkNDI3N2UwNTQ3NWZmNTkyMGJjM2JhNWRhOWY1ZmZmYyJ9fX0="
-        skin_update_interval: 3
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNmJlZTYwMGIzOWI3Nzg0MGY4YmYzMjQxMDA0NzY3M2NkOTgyZjNiZjM5Mzc5NDUyM2ZjODZmMzU0MWU0ZjA5ZCJ9fX0="
-        skin_update_interval: 3
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjM2ZGE1NGZlNDRhNDI5NzBlMTA5MmQzZGY3YzEzZTc5NWMxY2Q3MTEyYTEwNGQ5YmZiOGI3YjExYmZhN2MwZiJ9fX0"
-        skin_update_interval: 3
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNmQ4YmJmNDc4YzdiOTAwMmM3OTQ2ZWUzMjhhYjNlNDNkNWFiM2ZjZjBhNDE4ZjJkZDZiZWI5NWYzYjliYWE4NSJ9fX0="
-        skin_update_interval: 20
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjM2ZGE1NGZlNDRhNDI5NzBlMTA5MmQzZGY3YzEzZTc5NWMxY2Q3MTEyYTEwNGQ5YmZiOGI3YjExYmZhN2MwZiJ9fX0"
-        skin_update_interval: 3
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNmJlZTYwMGIzOWI3Nzg0MGY4YmYzMjQxMDA0NzY3M2NkOTgyZjNiZjM5Mzc5NDUyM2ZjODZmMzU0MWU0ZjA5ZCJ9fX0="
-        skin_update_interval: 3
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmJjMDgxMWM0NWMzNmVmNDNiMDBhMmY5NzMyOGI5MGRkNDI3N2UwNTQ3NWZmNTkyMGJjM2JhNWRhOWY1ZmZmYyJ9fX0="
-        skin_update_interval: 3
+    model: obsidienne
+    placement:
+      scale: 0.56
   AmongUs:
     displayname: "Among Us Rouge"
     animation: GLIDE
     animation_amplitude: 0.5
     model: amongus
     placement:
-      rotation:
-        y: 80
-      scale: 0.19
-    # Avant le modèle (tête seule) :
-    # animation: NONE
-    # skin_update_interval: 20
-    # skins: 
-    #   - "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYjdjMTRlYjg3ZGM2NDQ0YWU2MjVmMTIyY2YzYWU5NmZjOGEyODZhYmI2OWRjYzc4ZWU5NWNkNDQzMjMyYTA1YyJ9fX0="
-    #   - "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDZjODU1MGE3ODE2NmRhMWQ1YmIxNmJjZmQ2OTI2NTk3NWM5ZTk0NDg5YzU1MzI2NGI0Y2Y1ZWNjODE3MjcxMyJ9fX0="
-    #   - "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMWRlMzJjNzY0ZjNmMjhkMjcyOWIxNjFlZTM1MGZhMDQzZWI3ZDI5MjExMzIzYWVmMzRjMzZjOTM4ZDEwOGExMCJ9fX0="
-    #   - "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTcwMWFiZjQ0YWRhN2YyOWRiYTliYzkzMDE2MzBiYjIzNWRjZWFmMGYwZGVmYTVhMzc4YmRjYjBiMDFkYjU4YSJ9fX0="
-    #   - "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzgxMjUyMTc3MWE3Y2I4NDFhNWZmYTIzNzU2NjEwM2MyZjllNGRjMzQ0NTJlNzY2MTgyOWQwYjA5MjEyZTNmNCJ9fX0="
+      scale: 0.52
   Steve:
     displayname: "Steve"
-    animation: BOUNCING
-    skins: 
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzMwZmVhNDQzNDlmMDczZjNmOTNjZTg2ZWM5ZWVlODJmODRhMWM1ZTI5NjdlYjFjMTliN2MzNWY5YTVlNWY5OSJ9fX0="
-        skin_update_interval: 60
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzY2YWFlNTNjZjI5ZjYxZDUwM2MxM2MwZjk1Yzk3YTA1MWFiNGNjZDA0ZGY1NzQ4NmY4MDRjNGY2MzdlOTkyOCJ9fX0"
-        skin_update_interval: 5
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvY2U3YWEzMDU2ZmJhN2FlZTE3NDIwM2M0MmUyOWRkN2YwM2NlZGQ1YTI0MzVlMWU3MzJiNDU1YzZmMTBhMWFjOSJ9fX0="
-        skin_update_interval: 60
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzY2YWFlNTNjZjI5ZjYxZDUwM2MxM2MwZjk1Yzk3YTA1MWFiNGNjZDA0ZGY1NzQ4NmY4MDRjNGY2MzdlOTkyOCJ9fX0"
-        skin_update_interval: 5
+    animation: GLIDE
+    animation_amplitude: 0.5
+    model: steve
+    placement:
+      scale: 0.38
   Alex:
     displayname: "Alex"
-    animation: BOUNCING
-    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzFjZDI3NjJhY2I0YjQyNzhjZjExMTc2YTVmODc3OTlmOTNhMWQ5MTE2Y2IzY2I1N2VlNGQxZTYwMTM0NTg4In19fQ=="
+    animation: GLIDE
+    animation_amplitude: 0.5
+    model: alex
+    placement:
+      scale: 0.38
   Villageois:
     displayname: "Villageois"
-    animation: BOUNCING
+    animation: GLIDE
+    animation_amplitude: 0.5
     model: villageois
     placement:
-      rotation:
-        y: 170
-      scale: 0.5
-    # Avant le modèle (tête seule) :
-    # skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTJlNDBiYzFmMzQ4YWM3YWQ0YmViMjhiYWVkZjdkYjgxNjczMDViNGQ4ZjEyOWNiZjdhNDZlMzJkMGRiZWM4ZSJ9fX0="
+      scale: 0.38
   R2-D2:
     displayname: "R2-D2"
     animation: NONE
-    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTdhMGU1YmZlMzJmMTYxOWM2ODkxNTk0ZmI5YzNiMjc0YzM4ZTQ3Y2QwMWI3YWFmYzVjNGVlYmUzZjI5ODJhNCJ9fX0="
+    model: r2d2
+    placement:
+      scale: 0.44
   Bebe_Yoda:
     displayname: "Bébé Yoda"
-    animation: BOUNCING
-    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTljYjM3Mjk0ZTA2OGE4MjY4NDM3ZDI0ZmJkNGVlNGQ3YTBkZGQ4Y2Y5YzM4ZDE2NmU4NTYxMGFmZWYzMTI0In19fQ=="
+    animation: GLIDE
+    animation_amplitude: 0.6
+    model: bebe_yoda
+    placement:
+      scale: 0.44
   Nounours:
     displayname: "Nounours"
-    animation: BOUNCING
-    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTQ5YzcyYWIwNzUxODU5YWI5MjM2YjFlOTRkNDE1YmUzZGVhZjgwOGE0MWQ1OTY5YzRmYWJiNzhjYWY0In19fQ=="
+    animation: GLIDE
+    animation_amplitude: 0.5
+    model: nounours
+    placement:
+      scale: 0.42
   Slime_Dore:
     displayname: "Slime Doré"
-    animation: BOUNCING
+    animation: NONE
     model: slime_dore
     placement:
-      rotation:
-        y: 80
-      scale: 0.14
-    # Avant le modèle (tête seule) :
-    # skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjllM2Q2Y2VhYmNlNzI5ZWU3MjJjODA4MjQ2N2VkNTc0NzBlYjM4NDM2MTU3ZDVkZTA3YWZhMzQ5MWExNGQ1ZSJ9fX0="
+      scale: 0.6
   Panda:
     displayname: "Panda"
     animation: GLIDE
+    animation_amplitude: 0.5
     model: panda
     placement:
-      rotation:
-        y: -10
-      scale: 0.15
-    # Avant le modèle (tête seule) :
-    # skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjk0ZjIxZmU4MzM5ODEzNWM5ZDA0ZGViODRhNjAwNGVkMDFmOTgxMjAzY2I2NDQzYWU1NzBjMTU5OTRiOTQ3ZSJ9fX0="
+      scale: 0.36
   Sculk:
     displayname: "Sculk"
     animation: GLIDE
-    skins: 
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDE0YWRkMzc4NGY1NjZkNGIyNWIwZDk5ODMwOTAzOGE2MWJhY2RmYzYzYTlkOWM1MzUyM2Y2ZmEwOTFmMmMwMyJ9fX0="
-        skin_update_interval: 120
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODE3MjY5N2FmMjk0ZjlmNWM0ZTU5YTliMmY1MzA2ZDM0MDA5ZTZjZGZlZGVjYzU5NmMxMmI0NDRkNjlmMWY0NiJ9fX0="
-        skin_update_interval: 2
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvN2U5MDRkMDNjNTg4ZmFiZDdjOWQ0MjcwODk1MGRmYzY2MDEzMjkzZWIwZDY4NTczY2QyYTMyNTIwMzcyMzQ2YSJ9fX0K"
-        skin_update_interval: 3
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODE3MjY5N2FmMjk0ZjlmNWM0ZTU5YTliMmY1MzA2ZDM0MDA5ZTZjZGZlZGVjYzU5NmMxMmI0NDRkNjlmMWY0NiJ9fX0="
-        skin_update_interval: 2
+    animation_amplitude: 0.6
+    model: sculk
+    placement:
+      scale: 0.58
   Tortue:
     displayname: "Tortue"
     animation: GLIDE
+    animation_amplitude: 0.7
     model: tortue
     placement:
-      rotation:
-        y: 170
-      scale: 0.18
-    # Avant le modèle (tête seule) :
-    # skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWFlOTAzNzEzN2I2Mjg4NDJhMjkzODBmODI4YzI2ZWM2NjE4NjY0YzM4MDJjOTk0NWY0YzAxYTk0M2FhNDBlOSJ9fX0="
+      scale: 0.4
   Slime_Choco:
     displayname: "Slime en Chocolat"
-    animation: GLIDE
-    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTJkMTYyMDMwMGE4ZTFlMGJkYTcwYzcxZWZiYzQ2Yjc4NDVkNjE3MTU4NGQ4MDBmYTkwMDRjZmFkODhkMmFhOCJ9fX0="
+    animation: NONE
+    model: slime_choco
+    placement:
+      scale: 0.6
   Jeb:
     displayname: "Jeb le mouton"
     animation: NONE
-    skin_update_interval: 20
-    skins: 
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzQ0NTQ0MTUxYmEzOWQ1YzVhYzk2OTVmOTVmNTE1YzljNGZmYWZjOGNmYjU0OTJjNDgyNWU0ZDdlZmQ5In19fQ=="
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTFmZDgwNmM1YjU5NzkzOWI0YjY1ODUzZWIwMzFhZGU2OGM5NjMzYzZjYzU3ZDJkMGQ0N2NmNTQxODhlODMwIn19fQ=="
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvN2QzNGZkMDhhYTMzYjE4MThjM2YxNjU5YTAyYmM3ZGE1Y2EwYTIxYWEwMTI0NjQ5MzhkOTU5ODZjMWY0In19fQ=="
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMWRlZTcyNTI5OTQ0Njk4NjhiNDBhMGI3NGQ0YTIzMzhlMmQxZTlmNDEyNDE3NzRmMjA2MTJiODE2NGNhY2Y5OSJ9fX0="
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODA5ODc1MzEzNGNjZDIyYjJkNTUzYmFhNTllMTJlOTkzNDNmNzE4Njg0NjIyYmI1ZGRjOTM1ZjU3ZDYzZiJ9fX0="
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjk3MTllYzllZTZmNTNjMTdiMWY2Zjc0Nzg2NmIzMTIxNDAxZDM1Zjc3YTM5ODU5ZjEyMmQ0NzI4NjNlNDhlIn19fQ=="
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNmYzZDRkYjQxY2ZhYzdlZjNkYWY1YTI1ZTJmODFiMTdhZmUzYjU2N2RkOWFmMTZkZjUzZjJhYzNmYmNiMSJ9fX0="
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGM3ZjliNDIyNGI3ZmE0ZTRhNDQ5ODFlNDYyZjM0NTc5OWEzNWEzM2Y4YWQ0MDkzYTFhMWZjNGE5ODY3MzUifX19"
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODdjZWQ4MzdkMDI5NDRlYzZiZjdlYzcxYjhmZmUxMzIwZjAyYmZiZTM0YThmZGFkYWRhY2YyNTBkNTU1MjIifX19"
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZGU5NjJiZjA3YjZhNGM1NWI5OWVkZGU3MWQxMDc5ZDc0NDRkM2ZjODkxZDQzY2Q0YzI3ZmE3ZGIzNGQwYmM5NSJ9fX0="
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNmZmY2RiYTZhMjI5ZTQzNGEwNDA4NDQ2YTlmNWM0Nzc0YjhhYjE1YmVhMWVmZDMzMWE5ODIzMzIxYjUifX19"
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWYzMDU1MWFkOWE2NDE0YTIwZTliZWNkNDM1NjI4NTRiNjIyNTRkOTQwYTJkNjFmNDdjNGYxZGQ4OTIifX19"
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzBkMzkwMTE2OWYzZmViMTVkNTEzMTBmZTMxZThjOGY4MTk5ZDZkNThkYzUzMTMzMzk4Yjk4YmY3MWVmODU2In19fQ=="
+    model: jeb
+    placement:
+      scale: 0.42
   Cookie:
     displayname: "Cookie"
     animation: GLIDE
-    skins: 
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjAxNzY3OTFiNzFhYmYxZWUxY2QxY2I5YzU0MWIwMzE1MTM2OTRlYTcxYTRlMmUyYWY4MWEyYjZiNjY3MjUzYSJ9fX0="
-        skin_update_interval: 120
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNDg0MzYxYzk1YzAwNTU4ZDcyYTdmYjVkZTFlNTYzMTk2ZjNmM2I0YmZlMDcyZDgwYTA4MzUxMzdmNGU0ZTU0NSJ9fX0="
-        skin_update_interval: 2
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMmRmMjZlM2RiNzI0ZDJlNzU2MWRhOTAyODkyYWRlMTE3MGUwOWQyN2E1YTllZDUzYTFkODU1M2ZiMDM5OWY3NCJ9fX0="
-        skin_update_interval: 3
-      - value: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNDg0MzYxYzk1YzAwNTU4ZDcyYTdmYjVkZTFlNTYzMTk2ZjNmM2I0YmZlMDcyZDgwYTA4MzUxMzdmNGU0ZTU0NSJ9fX0="
-        skin_update_interval: 2
+    animation_amplitude: 0.5
+    model: cookie
+    placement:
+      scale: 0.46
   Bonhomme_de_Neige:
     displayname: "Bonhomme de Neige"
     animation: GLIDE
+    animation_speed: 0.75
+    animation_amplitude: 0.5
     model: bonhomme_de_neige
     placement:
-      rotation:
-        y: 170
-      scale: 0.25
-    # Avant le modèle (tête seule) :
-    # skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTBkNmFmMTVhMGYzYzMwZDdlNzFjMTk0MWMzMzc0MzBmYzA5NTQzN2E2NjI0NTA5ZDk2NTY5N2FlYjI2ZmEwOCJ9fX0="
+      scale: 0.4
   Pere_Noel:
     displayname: "Cadeau du Père Noël"
     animation: BOUNCING
@@ -432,9 +393,116 @@ pets:
       rotation:
         y: -10
       scale: 0.5
-    # Avant le modèle (tête seule) :
-    # skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTA5YWVkZWI5NTY4MmZkNmIxOGJkYzU5ZGY4NDE0YzM5MTdmNjQ1YWNiNDAxOTg2NTMwY2M0NzA1MjFiYjQyYyJ9fX0="
   Lapin:
     displayname: "Lapin"
     animation: BOUNCING
-    skin: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTU5MGJlNjc3N2MwZGU3Y2I4OWFiYmM0ZTE1NTdiOTVlMWJmOWVmYWM5YjQ0ZTlkNTM4YmYzNGNkNzU0ZTg0In19fQ=="
+    animation_speed: 0.8
+    model: lapin
+    placement:
+      scale: 0.46
+  Champignon:
+    displayname: "Champignon"
+    animation: GLIDE
+    animation_speed: 0.75
+    animation_amplitude: 0.5
+    model: champignon
+    placement:
+      rotation:
+        y: 170
+      scale: 0.9
+  Araignee:
+    displayname: "Araignée"
+    animation: GLIDE
+    animation_speed: 0.75
+    animation_amplitude: 0.4
+    model: araignee
+    placement:
+      rotation:
+        y: 170
+      scale: 0.28
+  Elephant:
+    displayname: "Éléphant"
+    animation: GLIDE
+    animation_speed: 0.75
+    animation_amplitude: 0.5
+    model: elephant
+    placement:
+      rotation:
+        y: 170
+      scale: 0.28
+  Ornithorynque:
+    displayname: "Ornithorynque"
+    animation: GLIDE
+    animation_amplitude: 0.6
+    model: ornithorynque
+    placement:
+      rotation:
+        y: 170
+      scale: 0.5
+  Teckel:
+    displayname: "Teckel"
+    animation: GLIDE
+    animation_speed: 0.75
+    animation_amplitude: 0.4
+    model: teckel
+    placement:
+      rotation:
+        y: 170
+      scale: 0.3
+  Shiba:
+    displayname: "Shiba"
+    animation: GLIDE
+    animation_speed: 0.75
+    animation_amplitude: 0.4
+    model: shiba
+    placement:
+      rotation:
+        y: 170
+      scale: 0.36
+  Canard:
+    displayname: "Canard"
+    animation: GLIDE
+    animation_amplitude: 0.5
+    model: canard
+    placement:
+      rotation:
+        y: 170
+      scale: 0.58
+  Herisson:
+    displayname: "Hérisson"
+    animation: GLIDE
+    animation_speed: 0.75
+    animation_amplitude: 0.4
+    model: herisson
+    placement:
+      rotation:
+        y: 260
+      scale: 0.42
+  Golem_de_Cuivre:
+    displayname: "Golem de Cuivre"
+    animation: GLIDE
+    animation_speed: 0.75
+    animation_amplitude: 0.4
+    model: golem_cuivre
+    placement:
+      rotation:
+        y: 170
+      scale: 0.27
+  Panda_Roux:
+    displayname: "Panda Roux"
+    animation: GLIDE
+    animation_speed: 0.75
+    animation_amplitude: 0.4
+    model: panda_roux
+    placement:
+      rotation:
+        y: 170
+      scale: 0.29
+  Ananas:
+    displayname: "Ananas"
+    animation: GLIDE
+    animation_speed: 0.75
+    animation_amplitude: 0.5
+    model: ananas
+    placement:
+      scale: 0.48

@@ -15,7 +15,9 @@ import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSp
 import org.Cry_Legende.sHCompagnons.config.ConfigManager;
 import org.Cry_Legende.sHCompagnons.config.PetType;
 import org.Cry_Legende.sHCompagnons.model.Affine;
+import org.Cry_Legende.sHCompagnons.model.Looks;
 import org.Cry_Legende.sHCompagnons.model.Part;
+import org.Cry_Legende.sHCompagnons.model.Track;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -27,6 +29,7 @@ import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +44,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * déplace avec le joueur à chaque image, sans aucun paquet de position. En mode FREE, la première pièce est
  * déplacée par le serveur toutes les quelques ticks et le client lisse le trajet. Le serveur n'envoie ensuite que
  * l'orientation quand le joueur tourne la tête, les images clés de l'animation et les changements de texture.
+ *
+ * Deux animations se combinent : celle du compagnon entier (rebond, montée et descente...), commune à toutes les
+ * pièces, et celle que le modèle donne à certaines pièces (ailes, oreilles...). Une pièce ne reçoit jamais qu'une
+ * cible à la fois : la prochaine image clé de l'une ou de l'autre, calculée avec les deux. Un changement de texture
+ * (clignement) part avec la cible en cours, pour ne pas faire sauter le trajet.
  *
  * Les joueurs qui voient le compagnon sont exactement ceux qui voient son propriétaire (événements de suivi de
  * Paper) plus le propriétaire lui-même. Un propriétaire invisible n'est plus vu de personne : son compagnon
@@ -79,9 +87,24 @@ public final class Pet {
     private boolean frozen;
     private int smoothingEndsTick;
 
+    // Animation du compagnon entier : le client va de frameFrom (au tick segmentStart) à frame (au tick nextKeyframeTick)
     private double animationTime;
     private int nextKeyframeTick;
+    private int segmentStart;
+    private Animation.Frame frameFrom = Animation.Frame.REST;
     private Animation.Frame frame = Animation.Frame.REST;
+
+    // Animation propre aux pièces du modèle. poses : dernière pose visée par pièce (repère du modèle) ; looks :
+    // apparence affichée ; poseDue, lookDue : tick de la prochaine image clé et du prochain changement d'apparence
+    // de la pièce ; headed : tick visé par le dernier envoi ; partsEpoch : tick du début des cycles
+    private final boolean animated;
+    private final Affine[] poses;
+    private final EntityData<?>[] looks;
+    private final int[] poseDue;
+    private final int[] lookDue;
+    private final int[] headed;
+    private int partsEpoch = Integer.MIN_VALUE;
+    private int nextPartTick;
 
     // Repos : le propriétaire n'a ni bougé ni tourné la tête depuis restAfterTicks, l'animation est arrêtée
     private static final int REST_TRANSITION_TICKS = 15;
@@ -94,9 +117,6 @@ public final class Pet {
     private float seenPitch;
     private int lastActiveTick = Integer.MIN_VALUE;
     private boolean resting;
-
-    private int skinIndex;
-    private int skinTicksLeft;
 
     private World freeWorld;
     private double freeX;
@@ -128,10 +148,23 @@ public final class Pet {
         this.ownerEntityId = owner.getEntityId();
         this.sentYaw = owner.getYaw();
         this.freeYaw = sentYaw;
-        this.skinTicksLeft = type.skins().isEmpty() ? 0 : type.skins().getFirst().ticks();
         if (type.animation().moves()) {
             this.frame = type.animation().frame(0, type.animationAmplitude());
+            this.frameFrom = frame;
         }
+        this.poses = new Affine[count];
+        this.looks = new EntityData<?>[count];
+        this.poseDue = new int[count];
+        this.lookDue = new int[count];
+        this.headed = new int[count];
+        boolean any = false;
+        for (int i = 0; i < count; i++) {
+            Part part = type.parts().get(i);
+            poses[i] = part.transform();
+            looks[i] = part.staticData().getFirst();
+            any |= part.track() != null || part.looks() != null;
+        }
+        this.animated = any;
     }
 
     public Player owner() {
@@ -305,11 +338,8 @@ public final class Pet {
         } else if (now >= nextFreeTick) {
             followFree(now);
         }
-        if (!resting && type.animation().moves() && now >= nextKeyframeTick) {
-            nextKeyframe(now);
-        }
-        if (type.cyclesSkins() && skinTicksLeft > 0 && --skinTicksLeft == 0) {
-            nextSkin();
+        if (!resting) {
+            animate(now);
         }
     }
 
@@ -335,16 +365,14 @@ public final class Pet {
                 resting = false;
                 animationTime = 0;
                 nextKeyframeTick = now;
+                partsEpoch = Integer.MIN_VALUE;
             }
             return;
         }
         int after = settings.restAfterTicks();
-        if (!resting && after > 0 && type.animation().moves() && now - lastActiveTick >= after) {
+        if (!resting && after > 0 && (type.animation().moves() || animated) && now - lastActiveTick >= after) {
             resting = true;
-            boolean turns = frame.spin() != 0;
-            frame = Animation.Frame.REST;
-            animationTime = 0;
-            sendFrame(REST_TRANSITION_TICKS, turns);
+            rest();
         }
     }
 
@@ -413,11 +441,10 @@ public final class Pet {
         Part part = type.parts().get(index);
         List<EntityData<?>> data = new ArrayList<>(part.staticData().size() + 8);
         data.addAll(part.staticData());
-        if (index == 0 && type.cyclesSkins()) {
-            data.add(new EntityData<>(Part.ITEM, EntityDataTypes.ITEMSTACK, type.skins().get(skinIndex).item()));
-        }
+        // Apparence en cours d'une pièce qui en change, à la place de celle de la pose de base
+        data.set(0, looks[index]);
         data.add(new EntityData<>(Part.POS_ROT_DURATION, EntityDataTypes.INT, attached ? turnSmoothing : settings.freeUpdateTicks()));
-        Affine affine = placed(part, frame);
+        Affine affine = placed(poses[index], frame);
         data.add(new EntityData<>(Part.TRANSLATION, EntityDataTypes.VECTOR3F, vector(affine.translation())));
         data.add(new EntityData<>(Part.LEFT_ROTATION, EntityDataTypes.QUATERNION, quaternion(affine.left())));
         data.add(new EntityData<>(Part.SCALE, EntityDataTypes.VECTOR3F, vector(affine.scale())));
@@ -425,15 +452,18 @@ public final class Pet {
         return data;
     }
 
-    /** Transformation d'une pièce : placement du compagnon, image d'animation (décalage, rotation sur lui-même). */
-    private Affine placed(Part part, Animation.Frame frame) {
+    /**
+     * Transformation d'une pièce : sa pose dans le modèle, le placement du compagnon et l'image de l'animation du
+     * compagnon entier (décalage, rotation sur lui-même).
+     */
+    private Affine placed(Affine pose, Animation.Frame frame) {
         PetType.Placement placement = type.placement();
         Vector3f offset = new Vector3f(placement.offset()).add(frame.offset());
         Quaternionf rotation = new Quaternionf(placement.rotation());
         if (frame.spin() != 0) {
             rotation.rotateY((float) Math.toRadians(frame.spin()));
         }
-        return part.transform().placed(offset, rotation, placement.scale());
+        return pose.placed(offset, rotation, placement.scale());
     }
 
     /**
@@ -543,53 +573,170 @@ public final class Pet {
         freeYaw = owner.getYaw();
     }
 
-    /** Image clé suivante : le client va de la position actuelle à celle-ci en « durée » ticks. */
-    private void nextKeyframe(int now) {
-        Animation animation = type.animation();
-        double next = animation.nextKey(animationTime);
-        int duration = Math.max(1, (int) Math.round((next - animationTime) / type.animationSpeed()));
-        animationTime = animation.wrap(next);
-        float previousSpin = frame.spin();
-        frame = animation.frame(next, type.animationAmplitude());
-        // La rotation n'est renvoyée que si l'animation fait tourner le modèle (SPIN) : 18 octets de moins par pièce
-        boolean turns = frame.spin() != previousSpin;
-        nextKeyframeTick = now + duration;
-        sendFrame(duration, turns);
-    }
-
-    /** Envoie l'image courante à tous : le client y va depuis la position affichée en « duration » ticks. */
-    private void sendFrame(int duration, boolean turns) {
-        if (shown.isEmpty()) {
+    /**
+     * Animations : nouvelle image clé du compagnon entier quand la précédente est atteinte, et images clés propres
+     * aux pièces animées du modèle. Le client fait chaque trajet seul, de ce qu'il affiche à la cible, en « durée » ticks.
+     */
+    private void animate(int now) {
+        boolean moves = type.animation().moves();
+        boolean whole = moves && now >= nextKeyframeTick;
+        boolean turns = false;
+        if (whole) {
+            Animation animation = type.animation();
+            double next = animation.nextKey(animationTime);
+            int duration = Math.max(1, (int) Math.round((next - animationTime) / type.animationSpeed()));
+            animationTime = animation.wrap(next);
+            frameFrom = frame;
+            frame = animation.frame(next, type.animationAmplitude());
+            // La rotation n'est renvoyée que si l'animation fait tourner le modèle (SPIN) : 18 octets de moins par pièce
+            turns = frame.spin() != frameFrom.spin();
+            segmentStart = now;
+            nextKeyframeTick = now + duration;
+        }
+        if (animated && partsEpoch == Integer.MIN_VALUE) {
+            partsEpoch = now;
+            Arrays.fill(poseDue, now);
+            Arrays.fill(lookDue, now);
+            nextPartTick = now;
+        }
+        if (!whole && !(animated && now >= nextPartTick)) {
             return;
         }
-        List<Affine> transforms = new ArrayList<>(ids.length);
-        for (Part part : type.parts()) {
-            transforms.add(placed(part, frame));
-        }
-        for (Player viewer : shown.values()) {
-            List<PacketWrapper<?>> packets = new ArrayList<>(ids.length);
-            for (int i = 0; i < ids.length; i++) {
-                Affine affine = transforms.get(i);
-                List<EntityData<?>> data = new ArrayList<>(4);
-                data.add(new EntityData<>(Part.INTERPOLATION_DELAY, EntityDataTypes.INT, 0));
-                data.add(new EntityData<>(Part.TRANSFORMATION_DURATION, EntityDataTypes.INT, duration));
-                data.add(new EntityData<>(Part.TRANSLATION, EntityDataTypes.VECTOR3F, vector(affine.translation())));
-                if (turns) {
-                    data.add(new EntityData<>(Part.LEFT_ROTATION, EntityDataTypes.QUATERNION, quaternion(affine.left())));
+
+        // Une liste de métadonnées par pièce à mettre à jour, partagée par tous les joueurs (seuls les paquets sont par joueur)
+        List<List<EntityData<?>>> updates = new ArrayList<>(ids.length);
+        int[] updated = new int[ids.length];
+        int nextPart = Integer.MAX_VALUE;
+        for (int i = 0; i < ids.length; i++) {
+            Part part = type.parts().get(i);
+            Track track = part.track();
+            Looks cycle = part.looks();
+            EntityData<?> look = null;
+            if (cycle != null) {
+                if (now >= lookDue[i]) {
+                    int local = Math.floorMod(now - partsEpoch, cycle.loop());
+                    lookDue[i] = now + cycle.nextTick(local) - local;
+                    EntityData<?> wanted = cycle.look(cycle.keyAt(local));
+                    if (wanted != looks[i]) {
+                        looks[i] = wanted;
+                        look = wanted;
+                    }
                 }
-                packets.add(new WrapperPlayServerEntityMetadata(ids[i], data));
+                nextPart = Math.min(nextPart, lookDue[i]);
             }
-            Packets.send(viewer, packets);
+            // La pièce vise la plus proche des deux prochaines images clés : celle du compagnon entier ou la sienne
+            int until = moves ? nextKeyframeTick : Integer.MAX_VALUE;
+            Affine pose = poses[i];
+            boolean due = false;
+            if (track != null) {
+                due = now >= poseDue[i];
+                if (due) {
+                    int local = Math.floorMod(now - partsEpoch, track.loop());
+                    poseDue[i] = now + track.nextTick(local) - local;
+                }
+                nextPart = Math.min(nextPart, poseDue[i]);
+                until = Math.min(until, poseDue[i]);
+                if (whole || due) {
+                    pose = track.at(Math.floorMod(until - partsEpoch, track.loop()));
+                }
+            }
+            if (!whole && !due && look == null) {
+                continue;
+            }
+            if (until == Integer.MAX_VALUE) {
+                // Pièce immobile : la nouvelle apparence seule
+                updated[updates.size()] = ids[i];
+                updates.add(List.of(look));
+                continue;
+            }
+            boolean reshaped = !pose.equals(poses[i]);
+            // Pièce qui garde sa pose jusqu'à sa prochaine image clé et suit déjà le reste du compagnon : rien à envoyer
+            if (!whole && look == null && !reshaped && (!moves || headed[i] == nextKeyframeTick)) {
+                continue;
+            }
+            poses[i] = pose;
+            headed[i] = until;
+            Affine affine = placed(pose, frameAt(until));
+            List<EntityData<?>> data = new ArrayList<>(8);
+            data.add(new EntityData<>(Part.INTERPOLATION_DELAY, EntityDataTypes.INT, 0));
+            data.add(new EntityData<>(Part.TRANSFORMATION_DURATION, EntityDataTypes.INT, Math.max(1, until - now)));
+            data.add(new EntityData<>(Part.TRANSLATION, EntityDataTypes.VECTOR3F, vector(affine.translation())));
+            if (turns || reshaped) {
+                data.add(new EntityData<>(Part.LEFT_ROTATION, EntityDataTypes.QUATERNION, quaternion(affine.left())));
+            }
+            if (reshaped) {
+                data.add(new EntityData<>(Part.SCALE, EntityDataTypes.VECTOR3F, vector(affine.scale())));
+                if (track.turnsRight()) {
+                    data.add(new EntityData<>(Part.RIGHT_ROTATION, EntityDataTypes.QUATERNION, quaternion(affine.right())));
+                }
+            }
+            if (look != null) {
+                data.add(look);
+            }
+            updated[updates.size()] = ids[i];
+            updates.add(data);
         }
+        nextPartTick = nextPart;
+        sendUpdates(updated, updates);
     }
 
-    private void nextSkin() {
-        skinIndex = (skinIndex + 1) % type.skins().size();
-        PetType.Skin skin = type.skins().get(skinIndex);
-        skinTicksLeft = skin.ticks();
+    /** Image du compagnon entier à ce tick, sur le trajet en cours entre deux images clés. */
+    private Animation.Frame frameAt(int tick) {
+        if (tick >= nextKeyframeTick || nextKeyframeTick <= segmentStart) {
+            return frame;
+        }
+        float k = (tick - segmentStart) / (float) (nextKeyframeTick - segmentStart);
+        float turn = frame.spin() - frameFrom.spin();
+        if (turn > 180) {
+            turn -= 360;
+        } else if (turn < -180) {
+            turn += 360;
+        }
+        return new Animation.Frame(new Vector3f(frameFrom.offset()).lerp(frame.offset(), k), frameFrom.spin() + turn * k);
+    }
+
+    /** Repos : toutes les pièces reviennent doucement à la pose et à l'apparence de base du modèle, à sa position neutre. */
+    private void rest() {
+        frame = Animation.Frame.REST;
+        frameFrom = frame;
+        animationTime = 0;
+        List<List<EntityData<?>>> updates = new ArrayList<>(ids.length);
+        for (int i = 0; i < ids.length; i++) {
+            Part part = type.parts().get(i);
+            poses[i] = part.transform();
+            Affine affine = placed(poses[i], frame);
+            List<EntityData<?>> data = new ArrayList<>(8);
+            data.add(new EntityData<>(Part.INTERPOLATION_DELAY, EntityDataTypes.INT, 0));
+            data.add(new EntityData<>(Part.TRANSFORMATION_DURATION, EntityDataTypes.INT, REST_TRANSITION_TICKS));
+            data.add(new EntityData<>(Part.TRANSLATION, EntityDataTypes.VECTOR3F, vector(affine.translation())));
+            data.add(new EntityData<>(Part.LEFT_ROTATION, EntityDataTypes.QUATERNION, quaternion(affine.left())));
+            if (part.track() != null) {
+                data.add(new EntityData<>(Part.SCALE, EntityDataTypes.VECTOR3F, vector(affine.scale())));
+                if (part.track().turnsRight()) {
+                    data.add(new EntityData<>(Part.RIGHT_ROTATION, EntityDataTypes.QUATERNION, quaternion(affine.right())));
+                }
+            }
+            EntityData<?> look = part.staticData().getFirst();
+            if (look != looks[i]) {
+                looks[i] = look;
+                data.add(look);
+            }
+            updates.add(data);
+        }
+        sendUpdates(ids, updates);
+    }
+
+    /** Envoie à tous une mise à jour de métadonnées par pièce (updates.get(n) pour l'entité entities[n]). */
+    private void sendUpdates(int[] entities, List<List<EntityData<?>>> updates) {
+        if (updates.isEmpty()) {
+            return;
+        }
         for (Player viewer : shown.values()) {
-            Packets.send(viewer, List.of(new WrapperPlayServerEntityMetadata(ids[0], List.of(
-                new EntityData<>(Part.ITEM, EntityDataTypes.ITEMSTACK, skin.item())))));
+            List<PacketWrapper<?>> packets = new ArrayList<>(updates.size());
+            for (int n = 0; n < updates.size(); n++) {
+                packets.add(new WrapperPlayServerEntityMetadata(entities[n], updates.get(n)));
+            }
+            Packets.send(viewer, packets);
         }
     }
 

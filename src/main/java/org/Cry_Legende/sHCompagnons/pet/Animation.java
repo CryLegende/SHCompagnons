@@ -12,8 +12,8 @@ public enum Animation {
     NONE(0, 0),
     /** Rebond vertical rapide (22 ticks). */
     BOUNCING(22, 0),
-    /** Montée et descente lentes (70 ticks, 8 images clés). */
-    GLIDE(70, 8.75),
+    /** Montée et descente lentes (70 ticks, 6 images clés). */
+    GLIDE(70, 70.0 / 6),
     /** GLIDE avec un balancement de côté. */
     GLIDE_WOBBLE(630, 10),
     /** Balancement de côté (126 ticks, 8 images clés). */
@@ -35,7 +35,7 @@ public enum Animation {
 
     private final int cycle;
     // Ticks entre deux images clés (hors rebond) : assez large pour peu de paquets, assez serré pour que les
-    // segments droits suivent la courbe (écart inférieur à 0,03 bloc)
+    // segments droits suivent la courbe (écart inférieur à 0,04 bloc à l'amplitude 1)
     private final double step;
 
     Animation(int cycle, double step) {

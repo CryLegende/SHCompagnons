@@ -11,3 +11,6 @@ out/
 # Sauvegardes locales
 backup-*/
 *.bak
+
+# Atelier : fichiers produits
+atelier/sortie/

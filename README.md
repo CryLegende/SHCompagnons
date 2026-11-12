@@ -21,7 +21,9 @@ Le modèle n'existe que chez les joueurs (entités `item_display`, `block_displa
 - **ATTACHED** (par défaut) : la première pièce du modèle est passagère du joueur, les autres sont passagères d'elle. Le client déplace le compagnon avec le joueur à chaque image, sans paquet de position, même en courant, en élytre ou sur une monture.
 - **FREE** : le compagnon flotte et rattrape le joueur avec un temps de retard ; une position est envoyée toutes les quelques ticks et le client lisse le trajet.
 
-Le serveur n'envoie ensuite que l'orientation quand le joueur tourne la tête (lissée par le client), les images clés des animations (le client fait le trajet entre deux images) et les changements de texture. Les joueurs qui voient un compagnon sont exactement ceux qui voient son propriétaire (événements de suivi de Paper), plus le propriétaire lui-même : aucun parcours des joueurs à chaque tick.
+Le serveur n'envoie ensuite que l'orientation quand le joueur tourne la tête (lissée par le client), les images clés des animations (le client fait le trajet entre deux images) et les changements de texture.
+
+Un modèle peut animer ses propres pièces (ailes qui battent, oreilles, bras qui salue, yeux qui clignent) en plus du mouvement d'ensemble du compagnon : voir [Animer les pièces d'un modèle](#animer-les-pièces-dun-modèle). Le jar fournit 39 modèles animés : 26 faits pour SkyHand, 13 repris de block-display.com. Les joueurs qui voient un compagnon sont exactement ceux qui voient son propriétaire (événements de suivi de Paper), plus le propriétaire lui-même : aucun parcours des joueurs à chaque tick.
 
 Un propriétaire **invisible** (potion, effet `give-effects` de WorldGuard, autre plugin) n'est plus vu de personne, et son compagnon non plus : il disparaît de chez les autres joueurs et revient avec le propriétaire. Le propriétaire garde le sien, comme son propre corps translucide (`companion_settings.show_to_owner_when_invisible`). L'invisibilité est lue à chaque tick, un test de drapeau par compagnon. Un propriétaire en vanish que les autres ne peuvent plus suivre n'a déjà plus de compagnon chez eux.
 
@@ -98,11 +100,12 @@ Taille en jeu = taille d'origine × `placement.scale`. Pour comparer, une tête 
 ### Bon à savoir
 
 - **Placement** : le modèle est recentré tout seul ; `placement.offset` désigne la position de son centre, dans le repère du joueur décrit en tête de `config.yml`. Le déplacer dans l'aperçu du site ne change rien. Le tourner avant **Get the command** change bien la commande.
-- **Animations** : celles de BDEngine ne sont pas reprises. Seule la pose du modèle compte ; le mouvement du compagnon vient de `animation` (`GLIDE`, `BOUNCING`, `SPIN`…).
+- **Animations** : celles de BDEngine ne sont pas reprises. Seule la pose du modèle compte ; le mouvement du compagnon vient de `animation` (`GLIDE`, `BOUNCING`, `SPIN`…) et, pour ses pièces, des poses du fichier de modèle ([Animer les pièces d'un modèle](#animer-les-pièces-dun-modèle)).
+- **Modèles refusés** : un modèle dont une entité s'étend sur plus de 64 blocs. Certains modèles du site étirent une tête sur des milliers de blocs pour n'en montrer qu'une face (plans transparents) ; ils ne peuvent pas servir de compagnon.
 - **Coût** : chaque entité du modèle est envoyée à chaque joueur qui voit le compagnon, puis chacune reçoit un paquet quand le propriétaire tourne la tête et à chaque image clé de l'animation. Un modèle de 10 entités coûte donc 10 fois une tête seule, en permanence. Limite : `companion_settings.max_model_parts` (12 par défaut), au-delà le compagnon est refusé au chargement. Viser 8 ou moins.
 - **Repos** : quand le propriétaire n'a ni bougé ni tourné la tête depuis `companion_settings.rest_after_seconds` (30), son compagnon revient à sa position neutre et arrête son animation ; il repart au premier mouvement. Un joueur absent ne coûte alors plus aucun paquet.
 - **Sens** : le modèle doit regarder vers +z, l'avant du joueur. Beaucoup de modèles du site regardent vers -z ou -x : corriger avec `placement.rotation.y` (180 ou 90).
-- **Modèles fournis** : ceux du jar (dossier `models/`) sont copiés dans `plugins/SHCompagnons/models/` quand ils y manquent, jamais remplacés.
+- **Modèles fournis** : ceux du jar (dossier `models/`) sont copiés dans `plugins/SHCompagnons/models/` quand ils y manquent, jamais remplacés. Pour reprendre un modèle fourni après une mise à jour, supprimer son fichier.
 - **Licence** : elle figure sur la page du modèle. En **BDL BY-NC** (usage non commercial), demander à l'auteur avant de vendre le compagnon en boutique.
 - **Autres sources** : les commandes de BDEngine (bdengine.app, **Export to Minecraft**) se collent de la même façon. Un fichier `.yml` de BlockDisplayCreator (`display.spawn-command`) se dépose tel quel dans `models/`. Un `.mcfunction` avec des lignes `summon` se dépose aussi.
 - **Formats lus** :
@@ -111,6 +114,45 @@ Taille en jeu = taille d'origine × `placement.scale`. Pour comparer, une tête 
   - objets à composants (1.20.5+) et anciennes têtes `SkullOwner`
   - blocs avec propriétés
   - textes JSON ou SNBT
+
+## Animer les pièces d'un modèle
+
+Après sa pose de base, un fichier de modèle peut décrire des animations : le même modèle dans d'autres poses, à des instants donnés d'un cycle qui se répète. Seules les entités qui bougent ou changent de texture d'une pose à l'autre sont animées ; le client fait le trajet d'une pose à la suivante.
+
+```text
+/summon block_display ~ ~ ~ {Passengers:[...]}
+@animation loop=40
+@pose 10
+/summon block_display ~ ~ ~ {Passengers:[...]}
+@pose 30
+/summon block_display ~ ~ ~ {Passengers:[...]}
+@animation loop=120
+@pose 114
+/summon block_display ~ ~ ~ {Passengers:[...]}
+```
+
+| Ligne | Rôle |
+|---|---|
+| première commande `/summon` | Pose de base : instant 0 de chaque cycle, pose du compagnon au repos. |
+| `@animation loop=<ticks>` | Ouvre une animation qui se répète tous les `<ticks>` ticks. |
+| `@pose <tick>` | Le modèle entier à cet instant du cycle : mêmes entités, dans le même ordre que la pose de base. |
+
+- À la fin du cycle, le modèle revient à la pose de base.
+- Plusieurs animations tournent chacune à leur rythme. Une entité peut bouger dans l'une et changer de texture (ou de bloc) dans une autre.
+- Depuis BDEngine : exporter le même projet dans chaque pose, sans ajouter ni retirer d'élément entre deux exports.
+- Ces animations s'ajoutent à `animation` du compagnon (`BOUNCING`, `GLIDE`…) : une pièce ne reçoit qu'une cible à la fois, calculée avec les deux. Elles s'arrêtent comme elle au repos.
+- Un modèle qui fait déjà son saut dans ses poses (les slimes fournis) se déclare avec `animation: NONE`.
+- **Coût** : un paquet par entité animée à chacune de ses poses, pour chaque joueur qui voit le compagnon. Une entité qui ne change pas dans une animation ne coûte rien, et une pose qu'une entité traverse déjà en allant de la précédente à la suivante n'est pas envoyée. `/shcompagnons models` donne le nombre d'entités animées de chaque modèle.
+- Une transformation écrite en `translation`, `left_rotation`, `scale`, `right_rotation` s'anime mieux qu'une transformation en 16 nombres : le client anime ces quatre valeurs séparément.
+
+### Modèles fournis
+
+| Modèles | Origine |
+|---|---|
+| `abeille`, `alex`, `amongus`, `ananas`, `bebe_yoda`, `bonhomme_de_neige`, `cochon`, `cookie`, `ghast`, `ghast_joyeux`, `jeb`, `lapin`, `nounours`, `obsidienne`, `panda`, `perroquet`, `r2d2`, `sculk`, `slime`, `slime_bleu`, `slime_choco`, `slime_dore`, `steve`, `tortue`, `villageois`, `zombie` | Faits pour SkyHand : pièces, textures et animations décrites dans [`atelier/modeles/`](atelier/modeles/). |
+| `araignee`, `cadeau`, `canard`, `champignon`, `elephant`, `golem_cuivre`, `herisson`, `manchot`, `ornithorynque`, `panda_roux`, `poulet`, `shiba`, `teckel` | [block-display.com](https://block-display.com/browse) ; auteur, lien et licence en tête de chaque fichier. Leur animation de repos est ajoutée par [`atelier/rigs.mjs`](atelier/rigs.mjs), sans toucher au dessin. |
+
+L'[atelier](atelier/README.md) fabrique ces modèles, les rend en image tels que le plugin les lit et chiffre leur coût réseau.
 
 ## Dépendances
 
@@ -124,7 +166,7 @@ Taille en jeu = taille d'origine × `placement.scale`. Pour comparer, une tête 
 | `/shcompagnons set <joueur> <type>` | Donne un compagnon et l'enregistre. | `shcompagnons.admin.set` |
 | `/shcompagnons unset <joueur>` | Retire le compagnon. | `shcompagnons.admin.unset` |
 | `/shcompagnons preview <type> [secondes]` | Essaie un compagnon sur soi (30 s), sans rien enregistrer. | `shcompagnons.admin.preview` |
-| `/shcompagnons models` | Liste les modèles importés, leur nombre d'entités et leur taille. | `shcompagnons.admin.reload` |
+| `/shcompagnons models` | Liste les modèles importés, leur nombre d'entités (dont animées) et leur taille. | `shcompagnons.admin.reload` |
 | `/shcompagnons reload` | Recharge `config.yml`, `messages.yml` et `models/`. Si un fichier est invalide, ou si `config.yml` ne définit plus aucun compagnon, rien n'est remplacé. La base et `reseau.actif` demandent un redémarrage. | `shcompagnons.admin.reload` |
 | `/shcompagnons info <joueur>` | Compagnon enregistré en base pour un joueur (en ligne ici ou sur un autre serveur, ou UUID). | `shcompagnons.admin.info` |
 

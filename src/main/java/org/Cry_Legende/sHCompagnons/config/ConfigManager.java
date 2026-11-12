@@ -1,7 +1,9 @@
 package org.Cry_Legende.sHCompagnons.config;
 
+import com.github.retrooper.packetevents.protocol.entity.data.EntityData;
 import io.github.retrooper.packetevents.util.SpigotConversionUtil;
 import org.Cry_Legende.sHCompagnons.SHCompagnons;
+import org.Cry_Legende.sHCompagnons.model.Looks;
 import org.Cry_Legende.sHCompagnons.model.ModelLibrary;
 import org.Cry_Legende.sHCompagnons.model.Part;
 import org.Cry_Legende.sHCompagnons.pet.Animation;
@@ -22,7 +24,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -279,22 +280,52 @@ public class ConfigManager {
                     + " entités, plus que companion_settings.max_model_parts (" + settings.maxModelParts() + "), compagnon ignoré.");
                 return null;
             }
-            return new PetType(key, displayName, model.parts(), List.of(), placement, animation, speed, amplitude, follow);
+            return new PetType(key, displayName, model.parts(), placement, animation, speed, amplitude, follow);
         }
 
-        List<PetType.Skin> skins = readSkins(key, section, heads);
+        List<Skin> skins = readSkins(key, section, heads);
         if (skins.isEmpty()) {
             plugin.getLogger().warning("Compagnon '" + key + "' : ni model, ni skin, ni skins valides, compagnon ignoré.");
             return null;
         }
-        return new PetType(key, displayName, List.of(Part.head(skins.getFirst().item())), Collections.unmodifiableList(skins),
-            placement, animation, speed, amplitude, follow);
+        return new PetType(key, displayName, List.of(headPart(skins)), placement, animation, speed, amplitude, follow);
+    }
+
+    /** Texture d'une tête et durée d'affichage (ticks). */
+    private record Skin(com.github.retrooper.packetevents.protocol.item.ItemStack item, String texture, int ticks) {
+    }
+
+    /**
+     * Tête d'un compagnon sans modèle. Plusieurs textures qui ont toutes une durée s'affichent tour à tour ; sinon la
+     * tête garde la première.
+     */
+    private static Part headPart(List<Skin> skins) {
+        Part head = Part.head(skins.getFirst().item());
+        if (skins.size() < 2 || skins.stream().anyMatch(skin -> skin.ticks() <= 0)) {
+            return head;
+        }
+        int[] ticks = new int[skins.size()];
+        EntityData<?>[] looks = new EntityData<?>[skins.size()];
+        String[] ids = new String[skins.size()];
+        int loop = 0;
+        for (int i = 0; i < ticks.length; i++) {
+            ticks[i] = loop;
+            loop += skins.get(i).ticks();
+            ids[i] = skins.get(i).texture();
+            int same = 0;
+            while (!ids[same].equals(ids[i])) {
+                same++;
+            }
+            looks[i] = i == 0 ? head.staticData().getFirst() : same < i ? looks[same] : Part.headLook(skins.get(i).item());
+        }
+        Looks cycle = Looks.of(loop, ticks, looks, ids);
+        return cycle == null ? head : head.withLooks(cycle);
     }
 
     /** Textures d'une tête : « skin » (une seule) ou « skins » (liste de textures, chacune avec sa durée éventuelle). */
-    private List<PetType.Skin> readSkins(String key, ConfigurationSection section, Map<String, com.github.retrooper.packetevents.protocol.item.ItemStack> heads) {
+    private List<Skin> readSkins(String key, ConfigurationSection section, Map<String, com.github.retrooper.packetevents.protocol.item.ItemStack> heads) {
         int globalInterval = section.getInt("skin_update_interval", 0);
-        List<PetType.Skin> skins = new ArrayList<>();
+        List<Skin> skins = new ArrayList<>();
         if (section.isList("skins")) {
             List<?> raw = section.getList("skins");
             if (raw != null) {
@@ -314,13 +345,13 @@ public class ConfigManager {
                         plugin.getLogger().warning("Compagnon '" + key + "' : entrée de skins sans texture, ignorée.");
                         continue;
                     }
-                    skins.add(new PetType.Skin(head(value.trim(), heads), Math.max(0, interval)));
+                    skins.add(new Skin(head(value.trim(), heads), value.trim(), Math.max(0, interval)));
                 }
             }
         } else if (section.isString("skin")) {
             String value = section.getString("skin");
             if (value != null && !value.isBlank()) {
-                skins.add(new PetType.Skin(head(value.trim(), heads), 0));
+                skins.add(new Skin(head(value.trim(), heads), value.trim(), 0));
             }
         }
         return skins;

@@ -293,7 +293,7 @@ public class CompagnonCommand implements CommandExecutor, TabCompleter {
             "{seconds}", String.valueOf(seconds)));
     }
 
-    /** Modèles du dossier models/ : nom, nombre d'entités et taille d'origine. */
+    /** Modèles du dossier models/ : nom, nombre d'entités (dont animées) et taille d'origine. */
     private void handleModelsCommand(@NotNull CommandSender sender) {
         Map<String, ModelLibrary.Model> models = plugin.getConfigManager().getModels().all();
         if (models.isEmpty()) {
@@ -302,9 +302,11 @@ public class CompagnonCommand implements CommandExecutor, TabCompleter {
         }
         plugin.getConfigManager().sendMessage(sender, "admin_models_header", Map.of("{count}", String.valueOf(models.size())));
         for (ModelLibrary.Model model : models.values()) {
-            sender.sendMessage(plugin.getConfigManager().getMessage("admin_models_line", Map.of(
+            int animated = model.animatedParts();
+            sender.sendMessage(plugin.getConfigManager().getMessage(animated > 0 ? "admin_models_line_animated" : "admin_models_line", Map.of(
                 "{model}", model.name(),
                 "{parts}", String.valueOf(model.parts().size()),
+                "{animated}", String.valueOf(animated),
                 "{x}", format(model.size().x),
                 "{y}", format(model.size().y),
                 "{z}", format(model.size().z)), false));

@@ -64,14 +64,21 @@ public final class Part {
         "firstperson_lefthand", "firstperson_righthand", "head", "gui", "ground", "fixed", "on_shelf");
     private static final List<String> BILLBOARDS = List.of("fixed", "vertical", "horizontal", "center");
 
+    // Têtes déjà construites, par texture réduite à l'adresse de son image
+    private static final Map<String, com.github.retrooper.packetevents.protocol.item.ItemStack> HEADS = new java.util.concurrent.ConcurrentHashMap<>();
+
     private final EntityType type;
     private final Affine transform;
     private final List<EntityData<?>> staticData;
+    private final Track track;
+    private final Looks looks;
 
-    private Part(EntityType type, Affine transform, List<EntityData<?>> staticData) {
+    private Part(EntityType type, Affine transform, List<EntityData<?>> staticData, Track track, Looks looks) {
         this.type = type;
         this.transform = transform;
         this.staticData = Collections.unmodifiableList(staticData);
+        this.track = track;
+        this.looks = looks;
     }
 
     public EntityType type() {
@@ -82,9 +89,37 @@ public final class Part {
         return transform;
     }
 
-    /** Métadonnées qui ne changent jamais (tout sauf la transformation et ses durées d'interpolation). */
+    /**
+     * Métadonnées fixes (tout sauf la transformation et ses durées d'interpolation). La première est l'apparence de
+     * la pièce (objet, bloc ou texte), la seule qu'une animation peut remplacer.
+     */
     public List<EntityData<?>> staticData() {
         return staticData;
+    }
+
+    /** Mouvement propre à la pièce (images clés du modèle), null si elle garde sa pose. */
+    public Track track() {
+        return track;
+    }
+
+    /** Apparences successives de la pièce, null si elle garde la sienne. */
+    public Looks looks() {
+        return looks;
+    }
+
+    /** Cette pièce avec un mouvement. */
+    public Part withTrack(Track track) {
+        return new Part(type, transform, staticData, track, looks);
+    }
+
+    /** Cette pièce avec un cycle d'apparences, dont la première est sa première métadonnée. */
+    public Part withLooks(Looks looks) {
+        return new Part(type, transform, staticData, track, looks);
+    }
+
+    /** Apparence d'une tête de joueur, pour un cycle de textures. */
+    public static EntityData<?> headLook(com.github.retrooper.packetevents.protocol.item.ItemStack item) {
+        return new EntityData<>(ITEM, EntityDataTypes.ITEMSTACK, item);
     }
 
     /** Tête de joueur seule (compagnons à texture) : contexte « fixed », centrée, 0,5 bloc de côté à l'échelle 1. */
@@ -92,25 +127,50 @@ public final class Part {
         List<EntityData<?>> data = new ArrayList<>();
         data.add(new EntityData<>(ITEM, EntityDataTypes.ITEMSTACK, item));
         data.add(new EntityData<>(ITEM_CONTEXT, EntityDataTypes.BYTE, CONTEXT_FIXED));
-        return new Part(EntityTypes.ITEM_DISPLAY, Affine.IDENTITY, data);
+        return new Part(EntityTypes.ITEM_DISPLAY, Affine.IDENTITY, data, null, null);
+    }
+
+    /**
+     * Apparence d'une entité d'affichage lue : l'objet d'un item_display, le bloc d'un block_display, le texte d'un
+     * text_display. C'est la métadonnée qu'une animation remplace pour changer de texture.
+     */
+    public static EntityData<?> look(SummonImporter.RawPart raw) {
+        Snbt.Compound entity = raw.data();
+        return switch (raw.type()) {
+            case "block_display" -> new EntityData<>(BLOCK_STATE, EntityDataTypes.BLOCK_STATE,
+                SpigotConversionUtil.fromBukkitBlockData(blockData(entity.compound("block_state"))).getGlobalId());
+            case "item_display" -> {
+                // Tête de joueur à texture, le cas courant : construite sans repasser par l'analyse de l'objet, et
+                // partagée par toutes les pièces et toutes les poses qui montrent la même texture
+                String texture = headTexture(entity.compound("item"));
+                yield new EntityData<>(ITEM, EntityDataTypes.ITEMSTACK, texture != null
+                    ? HEADS.computeIfAbsent(compactTexture(texture), t -> SpigotConversionUtil.fromBukkitItemStack(head(t)))
+                    : SpigotConversionUtil.fromBukkitItemStack(item(entity.compound("item"))));
+            }
+            default -> new EntityData<>(TEXT, EntityDataTypes.ADV_COMPONENT, text(entity.get("text")));
+        };
+    }
+
+    /** Texte d'origine de l'apparence d'une entité lue : égal pour deux poses qui montrent la même chose. */
+    public static String lookId(SummonImporter.RawPart raw) {
+        String key = switch (raw.type()) {
+            case "block_display" -> "block_state";
+            case "item_display" -> "item";
+            default -> "text";
+        };
+        return String.valueOf(raw.data().raw(key));
     }
 
     /** Pièce d'un modèle importé. */
     public static Part of(SummonImporter.RawPart raw) {
         Snbt.Compound entity = raw.data();
         List<EntityData<?>> data = new ArrayList<>();
+        data.add(look(raw));
         EntityType type;
         switch (raw.type()) {
-            case "block_display" -> {
-                type = EntityTypes.BLOCK_DISPLAY;
-                BlockData block = blockData(entity.compound("block_state"));
-                data.add(new EntityData<>(BLOCK_STATE, EntityDataTypes.BLOCK_STATE,
-                    SpigotConversionUtil.fromBukkitBlockData(block).getGlobalId()));
-            }
+            case "block_display" -> type = EntityTypes.BLOCK_DISPLAY;
             case "item_display" -> {
                 type = EntityTypes.ITEM_DISPLAY;
-                data.add(new EntityData<>(ITEM, EntityDataTypes.ITEMSTACK,
-                    SpigotConversionUtil.fromBukkitItemStack(item(entity.compound("item")))));
                 String context = entity.string("item_display");
                 int index = context == null ? 0 : CONTEXTS.indexOf(context.toLowerCase(Locale.ROOT));
                 if (index > 0) {
@@ -119,7 +179,6 @@ public final class Part {
             }
             default -> {
                 type = EntityTypes.TEXT_DISPLAY;
-                data.add(new EntityData<>(TEXT, EntityDataTypes.ADV_COMPONENT, text(entity.get("text"))));
                 Number lineWidth = entity.number("line_width");
                 if (lineWidth != null) {
                     data.add(new EntityData<>(LINE_WIDTH, EntityDataTypes.INT, lineWidth.intValue()));
@@ -177,7 +236,7 @@ public final class Part {
         if (glow != null) {
             data.add(new EntityData<>(GLOW_COLOR, EntityDataTypes.INT, glow.intValue()));
         }
-        return new Part(type, raw.transform(), data);
+        return new Part(type, raw.transform(), data, null, null);
     }
 
     private static void addFloat(List<EntityData<?>> data, int index, Number value) {
@@ -202,6 +261,35 @@ public final class Part {
             text.append(']');
         }
         return Bukkit.createBlockData(text.toString());
+    }
+
+    /**
+     * Texture d'une tête de joueur décrite en SNBT (composant « minecraft:profile », ou ancien « SkullOwner »), null
+     * pour tout autre objet ou une tête sans texture.
+     */
+    private static String headTexture(Snbt.Compound item) {
+        String id = item == null ? null : item.string("id");
+        if (id == null || !id.endsWith("player_head")) {
+            return null;
+        }
+        Snbt.Compound components = item.compound("components");
+        Snbt.Compound profile = components == null ? null : components.compound("minecraft:profile");
+        List<?> properties = profile == null ? null : profile.list("properties");
+        if (properties != null) {
+            for (Object property : properties) {
+                if (property instanceof Snbt.Compound c && "textures".equals(c.string("name")) && c.string("value") != null) {
+                    return c.string("value");
+                }
+            }
+        }
+        Snbt.Compound tag = item.compound("tag");
+        Snbt.Compound owner = tag == null ? null : tag.compound("SkullOwner");
+        Snbt.Compound legacy = owner == null ? null : owner.compound("Properties");
+        List<?> textures = legacy == null ? null : legacy.list("textures");
+        if (textures != null && !textures.isEmpty() && textures.getFirst() instanceof Snbt.Compound texture) {
+            return texture.string("Value");
+        }
+        return null;
     }
 
     /**
