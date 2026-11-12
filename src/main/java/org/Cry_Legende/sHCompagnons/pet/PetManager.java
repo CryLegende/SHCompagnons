@@ -1,8 +1,12 @@
 package org.Cry_Legende.sHCompagnons.pet;
 
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.Cry_Legende.sHCompagnons.SHCompagnons;
+import org.Cry_Legende.sHCompagnons.config.ConfigManager;
 import org.Cry_Legende.sHCompagnons.config.PetType;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
@@ -205,6 +209,44 @@ public class PetManager {
         Pet pet = activePets.get(owner.getUniqueId());
         if (pet != null) {
             pet.untrack(viewer);
+        }
+    }
+
+    /**
+     * Clic d'un joueur. S'il vise son compagnon, celui-ci saute pour tous ceux qui le voient, avec une particule ;
+     * le son et la phrase ne vont qu'au propriétaire.
+     */
+    public void onClick(@NotNull Player player) {
+        Pet pet = activePets.get(player.getUniqueId());
+        if (pet == null) {
+            return;
+        }
+        ConfigManager.Click click = plugin.getConfigManager().getSettings().click();
+        if (!click.enabled()) {
+            return;
+        }
+        double[] at = pet.click();
+        if (at == null) {
+            return;
+        }
+        PetType type = pet.type();
+        if (!type.clickSound().isEmpty() && click.volume() > 0) {
+            player.playSound(new Location(player.getWorld(), at[0], at[1], at[2]), type.clickSound(), SoundCategory.NEUTRAL, click.volume(), type.clickPitch());
+        }
+        if (click.particle() != null) {
+            double top = at[1] + type.radius() + click.hopHeight() + 0.15;
+            for (Player viewer : pet.viewers()) {
+                viewer.spawnParticle(click.particle(), at[0], top, at[2], 1);
+            }
+        }
+        String phrase = plugin.getConfigManager().clickPhrase(type);
+        if (phrase.isEmpty()) {
+            return;
+        }
+        if (click.actionBar()) {
+            player.sendActionBar(LegacyComponentSerializer.legacySection().deserialize(phrase));
+        } else {
+            player.sendMessage(phrase);
         }
     }
 

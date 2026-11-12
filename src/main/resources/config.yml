@@ -20,6 +20,10 @@
 # sa vue, mais reste en base (nettoyé à sa prochaine connexion). La base (database) et reseau.actif demandent un
 # redémarrage.
 #
+# Clic sur son compagnon : le joueur qui vise son compagnon et clique le fait sauter, avec un son, une particule et
+# une phrase (companion_settings.click, phrases dans messages.yml). Accroupi, le compagnon ne tourne plus avec le
+# regard : le joueur peut se tourner vers lui.
+#
 # Placeholders : %shcompagnons_current_pet_type%, %shcompagnons_current_pet_displayname%.
 # Messages : messages.yml.
 #
@@ -186,6 +190,28 @@ companion_settings:
   # tout seul pour un modèle qui a beaucoup de textures successives. 0 : le compagnon apparaît aussitôt.
   preload_ticks: 12
 
+  # Clic du propriétaire sur son compagnon. Le compagnon n'a pas de hitbox : le clic compte quand le regard du
+  # joueur passe sur le modèle, à portée de main. Clic gauche toujours ; clic droit seulement avec un objet en main
+  # ou un bloc visé (sans cela le client n'envoie rien). Le saut est vu de tous, le son et la phrase du joueur seul.
+  click:
+    enabled: true
+    # Délai minimal entre deux réactions (ticks, 20 = 1 seconde ; jamais moins que la durée du saut, 14 ticks)
+    cooldown_ticks: 40
+    # Hauteur du saut (blocs) ; un petit rebond le suit. 0 : pas de saut.
+    hop_height: 0.22
+    # Marge autour du modèle pour le viser plus facilement (blocs)
+    aim_margin: 0.1
+    # Son joué au propriétaire, à la place du compagnon : nom du son dans le jeu (ex : entity.pig.ambient), celui de
+    # la commande /playsound. Le « click » d'un compagnon le remplace. Vide : aucun son.
+    sound: entity.chicken.egg
+    volume: 0.5
+    # Hauteur du son (0,5 grave à 2 aigu)
+    pitch: 1.3
+    # Particule au-dessus du compagnon, pour ceux qui le voient (nom Bukkit, ex : HEART, NOTE). Vide : aucune.
+    particle: HEART
+    # Où s'affiche la phrase (click_phrases de messages.yml) : ACTIONBAR (au-dessus de la barre d'objets) ou CHAT
+    message: ACTIONBAR
+
 # Compagnons. La clé (ex : ghast) est celle de /shcompagnons set <joueur> <clé>.
 #
 #   displayname           nom affiché (codes couleur &)
@@ -203,6 +229,8 @@ companion_settings:
 #   animation_amplitude   ampleur des mouvements de l'animation (1 = normale)
 #   follow                ATTACHED ou FREE (voir companion_settings)
 #   placement             offset, rotation, scale (voir companion_settings), seules les clés données changent
+#   click                 sound, pitch : son du compagnon quand son propriétaire clique dessus (voir
+#                         companion_settings.click) ; sound vide : aucun son
 #
 # Exemple de compagnon importé (fichier models/dragon.txt) :
 #   dragon:
@@ -217,48 +245,72 @@ pets:
     displayname: "Ghast"
     animation: FLOAT
     model: ghast
+    click:
+      sound: entity.ghast.ambient
+      pitch: 1.8
     placement:
       scale: 0.5
   happy_ghast:
     displayname: "Happy Ghast !"
     animation: FLOAT
     model: ghast_joyeux
+    click:
+      sound: entity.happy_ghast.ambient
+      pitch: 1.2
     placement:
       scale: 0.5
   Slime:
     displayname: "Slime"
     animation: NONE
     model: slime
+    click:
+      sound: entity.slime.squish_small
+      pitch: 1.0
     placement:
       scale: 0.6
   Slime_Bleu:
     displayname: "Slime Bleu (Limule ?)"
     animation: NONE
     model: slime_bleu
+    click:
+      sound: entity.slime.squish_small
+      pitch: 1.2
     placement:
       scale: 0.6
   Zombie:
     displayname: "Zombie"
     animation: FLOAT
     model: zombie
+    click:
+      sound: entity.zombie.ambient
+      pitch: 1.5
     placement:
       scale: 0.42
   cochon:
     displayname: "Cochon"
     animation: FLOAT
     model: cochon
+    click:
+      sound: entity.pig.ambient
+      pitch: 1.2
     placement:
       scale: 0.46
   Abeille:
     displayname: "Abeille"
     animation: FLOAT
     model: abeille
+    click:
+      sound: entity.bee.pollinate
+      pitch: 1.3
     placement:
       scale: 0.45
   Manchot:
     displayname: "Manchot"
     animation: FLOAT
     model: manchot
+    click:
+      sound: entity.dolphin.ambient
+      pitch: 1.2
     placement:
       rotation:
         y: 170
@@ -267,12 +319,18 @@ pets:
     displayname: "Perroquet"
     animation: FLOAT
     model: perroquet
+    click:
+      sound: entity.parrot.ambient
+      pitch: 1.0
     placement:
       scale: 0.52
   Poulet:
     displayname: "Poulet"
     animation: FLOAT
     model: poulet
+    click:
+      sound: entity.chicken.ambient
+      pitch: 1.1
     placement:
       rotation:
         y: 170
@@ -281,12 +339,18 @@ pets:
     displayname: "Obsidienne"
     animation: FLOAT
     model: obsidienne
+    click:
+      sound: block.amethyst_block.chime
+      pitch: 0.8
     placement:
       scale: 0.56
   AmongUs:
     displayname: "Among Us Rouge"
     animation: FLOAT
     model: amongus
+    click:
+      sound: block.note_block.bit
+      pitch: 1.2
     placement:
       scale: 0.6
   Steve:
@@ -305,18 +369,27 @@ pets:
     displayname: "Villageois"
     animation: FLOAT
     model: villageois
+    click:
+      sound: entity.villager.celebrate
+      pitch: 1.0
     placement:
       scale: 0.42
   R2-D2:
     displayname: "R2-D2"
     animation: FLOAT
     model: r2d2
+    click:
+      sound: block.note_block.bit
+      pitch: 1.8
     placement:
       scale: 0.5
   Bebe_Yoda:
     displayname: "Bébé Yoda"
     animation: FLOAT
     model: bebe_yoda
+    click:
+      sound: entity.allay.ambient_without_item
+      pitch: 1.0
     placement:
       scale: 0.48
   Nounours:
@@ -329,54 +402,81 @@ pets:
     displayname: "Slime Doré"
     animation: NONE
     model: slime_dore
+    click:
+      sound: entity.slime.squish_small
+      pitch: 1.4
     placement:
       scale: 0.6
   Panda:
     displayname: "Panda"
     animation: FLOAT
     model: panda
+    click:
+      sound: entity.panda.ambient
+      pitch: 1.2
     placement:
       scale: 0.42
   Sculk:
     displayname: "Sculk"
     animation: FLOAT
     model: sculk
+    click:
+      sound: block.sculk_sensor.clicking
+      pitch: 1.2
     placement:
       scale: 0.55
   Tortue:
     displayname: "Tortue"
     animation: FLOAT
     model: tortue
+    click:
+      sound: entity.turtle.ambient_land
+      pitch: 1.2
     placement:
       scale: 0.46
   Slime_Choco:
     displayname: "Slime en Chocolat"
     animation: NONE
     model: slime_choco
+    click:
+      sound: entity.slime.squish_small
+      pitch: 0.8
     placement:
       scale: 0.6
   Jeb:
     displayname: "Jeb le mouton"
     animation: FLOAT
     model: jeb
+    click:
+      sound: entity.sheep.ambient
+      pitch: 1.2
     placement:
       scale: 0.46
   Cookie:
     displayname: "Cookie"
     animation: FLOAT
     model: cookie
+    click:
+      sound: entity.generic.eat
+      pitch: 1.2
     placement:
       scale: 0.5
   Bonhomme_de_Neige:
     displayname: "Bonhomme de Neige"
     animation: FLOAT
     model: bonhomme_de_neige
+    click:
+      sound: block.snow.break
+      pitch: 1.0
     placement:
       scale: 0.42
   Pere_Noel:
     displayname: "Cadeau du Père Noël"
     animation: FLOAT
     model: cadeau
+    click:
+      sound: block.note_block.bell
+      pitch: 1.5
     placement:
       rotation:
         y: -10
@@ -385,12 +485,18 @@ pets:
     displayname: "Lapin"
     animation: FLOAT
     model: lapin
+    click:
+      sound: entity.rabbit.ambient
+      pitch: 1.2
     placement:
       scale: 0.5
   Champignon:
     displayname: "Champignon"
     animation: FLOAT
     model: champignon
+    click:
+      sound: block.fungus.break
+      pitch: 1.2
     placement:
       rotation:
         y: 170
@@ -399,6 +505,9 @@ pets:
     displayname: "Éléphant"
     animation: FLOAT
     model: elephant
+    click:
+      sound: entity.camel.ambient
+      pitch: 0.9
     placement:
       rotation:
         y: 170
@@ -407,6 +516,9 @@ pets:
     displayname: "Ornithorynque"
     animation: FLOAT
     model: ornithorynque
+    click:
+      sound: entity.axolotl.idle_air
+      pitch: 1.0
     placement:
       rotation:
         y: 170
@@ -415,6 +527,9 @@ pets:
     displayname: "Teckel"
     animation: FLOAT
     model: teckel
+    click:
+      sound: entity.wolf.ambient
+      pitch: 1.5
     placement:
       rotation:
         y: 170
@@ -423,6 +538,9 @@ pets:
     displayname: "Shiba"
     animation: FLOAT
     model: shiba
+    click:
+      sound: entity.wolf.ambient
+      pitch: 1.2
     placement:
       rotation:
         y: 170
@@ -431,6 +549,9 @@ pets:
     displayname: "Hérisson"
     animation: FLOAT
     model: herisson
+    click:
+      sound: entity.fox.sniff
+      pitch: 1.3
     placement:
       rotation:
         y: 260
@@ -439,6 +560,9 @@ pets:
     displayname: "Golem de Cuivre"
     animation: FLOAT
     model: golem_cuivre
+    click:
+      sound: block.copper.place
+      pitch: 1.4
     placement:
       rotation:
         y: 170
@@ -447,6 +571,9 @@ pets:
     displayname: "Panda Roux"
     animation: FLOAT
     model: panda_roux
+    click:
+      sound: entity.fox.sleep
+      pitch: 1.3
     placement:
       rotation:
         y: 170
@@ -456,6 +583,9 @@ pets:
     displayname: "Araignée"
     animation: FLOAT
     model: halloween_araignee
+    click:
+      sound: entity.spider.ambient
+      pitch: 1.5
     placement:
       rotation:
         y: 170
@@ -464,6 +594,9 @@ pets:
     displayname: "Canard"
     animation: FLOAT
     model: paques_canard
+    click:
+      sound: entity.chicken.ambient
+      pitch: 0.8
     placement:
       rotation:
         y: 170
@@ -472,5 +605,8 @@ pets:
     displayname: "Ananas"
     animation: FLOAT
     model: ete_ananas
+    click:
+      sound: block.sweet_berry_bush.pick_berries
+      pitch: 1.0
     placement:
       scale: 0.52

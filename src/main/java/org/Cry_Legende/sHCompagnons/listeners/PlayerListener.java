@@ -10,17 +10,22 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerAnimationEvent;
+import org.bukkit.event.player.PlayerAnimationType;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Qui voit quel compagnon, et quand le client du propriétaire perd le sien. Le déplacement, lui, n'a besoin
- * d'aucun événement : le client s'en charge.
+ * Qui voit quel compagnon, quand le client du propriétaire perd le sien, et les clics du propriétaire sur son
+ * compagnon. Le déplacement, lui, n'a besoin d'aucun événement : le client s'en charge.
  */
 public class PlayerListener implements Listener {
 
@@ -57,6 +62,23 @@ public class PlayerListener implements Listener {
     public void onUntrack(PlayerUntrackEntityEvent event) {
         if (event.getEntity() instanceof Player owner) {
             plugin.getPetManager().onUntrack(event.getPlayer(), owner);
+        }
+    }
+
+    // Clic gauche : le client balance le bras, qu'il vise un bloc, une créature ou rien. Le compagnon n'a pas de
+    // hitbox (entités d'affichage) : c'est le regard du joueur qui dit s'il le vise.
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onSwing(PlayerAnimationEvent event) {
+        if (event.getAnimationType() == PlayerAnimationType.ARM_SWING) {
+            plugin.getPetManager().onClick(event.getPlayer());
+        }
+    }
+
+    // Clic droit : le client ne l'envoie que s'il vise un bloc ou tient un objet
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onInteract(PlayerInteractEvent event) {
+        if (event.getHand() == EquipmentSlot.HAND && (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK)) {
+            plugin.getPetManager().onClick(event.getPlayer());
         }
     }
 

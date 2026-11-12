@@ -9,7 +9,9 @@ import java.util.List;
 
 /**
  * Un type de compagnon de config.yml, prêt à afficher : pièces du modèle (une tête seule, avec ses textures
- * successives, ou un modèle importé avec ses animations), placement, animation et suivi.
+ * successives, ou un modèle importé avec ses animations), placement, animation et suivi. radius : demi-taille du
+ * modèle en jeu (blocs), pour savoir si le joueur le vise ; clickSound, clickPitch : son joué quand son
+ * propriétaire clique dessus (vide : aucun).
  */
 public record PetType(
     String key,
@@ -19,7 +21,10 @@ public record PetType(
     Animation animation,
     float animationSpeed,
     float animationAmplitude,
-    FollowMode follow
+    FollowMode follow,
+    float radius,
+    String clickSound,
+    float clickPitch
 ) {
 
     /** Position du modèle autour du joueur : décalage, rotation et échelle uniforme. */

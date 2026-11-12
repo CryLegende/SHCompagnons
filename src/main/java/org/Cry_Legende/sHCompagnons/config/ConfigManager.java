@@ -8,6 +8,9 @@ import org.Cry_Legende.sHCompagnons.model.ModelLibrary;
 import org.Cry_Legende.sHCompagnons.model.Part;
 import org.Cry_Legende.sHCompagnons.pet.Animation;
 import org.bukkit.ChatColor;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Particle;
+import org.bukkit.Registry;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -52,7 +55,25 @@ public class ConfigManager {
         boolean freezeTurnWhenSneaking,
         int sneakResumeTicks,
         int joinDelayTicks,
-        int preloadTicks
+        int preloadTicks,
+        Click click
+    ) {
+    }
+
+    /**
+     * Réaction d'un compagnon au clic de son propriétaire (companion_settings.click) : saut du modèle, son et
+     * particule, phrase de messages.yml affichée dans le chat ou au-dessus de la barre d'objets.
+     */
+    public record Click(
+        boolean enabled,
+        int cooldownTicks,
+        float hopHeight,
+        float aimMargin,
+        String sound,
+        float volume,
+        float pitch,
+        @Nullable Particle particle,
+        boolean actionBar
     ) {
     }
 
@@ -81,6 +102,8 @@ public class ConfigManager {
 
     // Messages
     private final Map<String, String> messages = new HashMap<>();
+    // Phrases du clic sur un compagnon (click_phrases), une tirée au hasard à chaque réaction
+    private List<String> clickPhrases = List.of();
     private String messagePrefix = "";
 
     public ConfigManager(@NotNull SHCompagnons plugin) {
@@ -182,7 +205,51 @@ public class ConfigManager {
             section.getBoolean("turn.freeze_when_sneaking", true),
             Math.max(0, section.getInt("turn.resume_smoothing_ticks", 8)),
             Math.max(1, section.getInt("join_delay_ticks", 20)),
-            Math.max(0, Math.min(60, section.getInt("preload_ticks", 12))));
+            Math.max(0, Math.min(60, section.getInt("preload_ticks", 12))),
+            readClick(section.getConfigurationSection("click")));
+    }
+
+    private Click readClick(@Nullable ConfigurationSection section) {
+        if (section == null) {
+            section = new YamlConfiguration();
+        }
+        Particle particle = null;
+        String particleName = section.getString("particle", "HEART").trim();
+        if (!particleName.isEmpty()) {
+            try {
+                particle = Particle.valueOf(particleName.toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException e) {
+                plugin.getLogger().warning("companion_settings.click.particle : particule inconnue '" + particleName + "', aucune particule.");
+            }
+        }
+        String message = section.getString("message", "ACTIONBAR").trim();
+        if (!message.equalsIgnoreCase("ACTIONBAR") && !message.equalsIgnoreCase("CHAT")) {
+            plugin.getLogger().warning("companion_settings.click.message : '" + message + "' inconnu (ACTIONBAR ou CHAT), ACTIONBAR gardé.");
+            message = "ACTIONBAR";
+        }
+        return new Click(
+            section.getBoolean("enabled", true),
+            Math.max(0, section.getInt("cooldown_ticks", 40)),
+            (float) clamp(section.getDouble("hop_height", 0.22), 0.0, 2.0),
+            (float) clamp(section.getDouble("aim_margin", 0.1), 0.0, 1.0),
+            sound(section.getString("sound", "entity.chicken.egg"), "companion_settings.click.sound"),
+            (float) clamp(section.getDouble("volume", 0.5), 0.0, 1.0),
+            (float) clamp(section.getDouble("pitch", 1.3), 0.5, 2.0),
+            particle,
+            message.equalsIgnoreCase("ACTIONBAR"));
+    }
+
+    /** Nom d'un son du jeu (ex : entity.pig.ambient) ; un nom que ce serveur ne connaît pas est signalé et gardé (pack de ressources). */
+    private String sound(@Nullable String name, String where) {
+        if (name == null || name.isBlank()) {
+            return "";
+        }
+        String sound = name.trim().toLowerCase(Locale.ROOT);
+        NamespacedKey key = NamespacedKey.fromString(sound);
+        if (key == null || Registry.SOUND_EVENT.get(key) == null) {
+            plugin.getLogger().warning(where + " : le son '" + name + "' n'existe pas dans cette version du jeu.");
+        }
+        return sound;
     }
 
     /** Placement d'une section (absente : les valeurs par défaut) ; chaque clé absente garde la valeur par défaut. */
@@ -269,6 +336,9 @@ public class ConfigManager {
         float amplitude = (float) section.getDouble("animation_amplitude", 1.0);
         PetType.FollowMode follow = readFollow(section.getString("follow"), settings.follow(), "compagnon " + key);
         PetType.Placement placement = readPlacement(section.getConfigurationSection("placement"), settings.placement());
+        String clickSound = section.isSet("click.sound")
+            ? sound(section.getString("click.sound"), "compagnon " + key + ", click.sound") : settings.click().sound();
+        float clickPitch = (float) clamp(section.getDouble("click.pitch", settings.click().pitch()), 0.5, 2.0);
 
         String modelName = section.getString("model");
         if (modelName != null) {
@@ -282,7 +352,9 @@ public class ConfigManager {
                     + " entités, plus que companion_settings.max_model_parts (" + settings.maxModelParts() + "), compagnon ignoré.");
                 return null;
             }
-            return new PetType(key, displayName, model.parts(), placement, animation, speed, amplitude, follow);
+            float largest = Math.max(model.size().x, Math.max(model.size().y, model.size().z));
+            return new PetType(key, displayName, model.parts(), placement, animation, speed, amplitude, follow,
+                largest * placement.scale() / 2, clickSound, clickPitch);
         }
 
         List<Skin> skins = readSkins(key, section, heads);
@@ -290,7 +362,9 @@ public class ConfigManager {
             plugin.getLogger().warning("Compagnon '" + key + "' : ni model, ni skin, ni skins valides, compagnon ignoré.");
             return null;
         }
-        return new PetType(key, displayName, List.of(headPart(skins)), placement, animation, speed, amplitude, follow);
+        // Une tête seule fait 0,5 bloc de côté à l'échelle 1
+        return new PetType(key, displayName, List.of(headPart(skins)), placement, animation, speed, amplitude, follow,
+            0.25f * placement.scale(), clickSound, clickPitch);
     }
 
     /** Texture d'une tête et durée d'affichage (ticks). */
@@ -403,6 +477,17 @@ public class ConfigManager {
                 messages.put(key, messagesFile.getString(key));
             }
         }
+        this.clickPhrases = List.copyOf(messagesFile.getStringList("click_phrases"));
+    }
+
+    /** Phrase affichée au propriétaire qui clique sur ce compagnon, tirée au hasard (vide : aucune phrase). */
+    @NotNull
+    public String clickPhrase(@NotNull PetType type) {
+        if (clickPhrases.isEmpty()) {
+            return "";
+        }
+        String phrase = clickPhrases.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(clickPhrases.size()));
+        return ChatColor.translateAlternateColorCodes('&', phrase.replace("{pet_display_name}", type.displayName()));
     }
 
     @NotNull

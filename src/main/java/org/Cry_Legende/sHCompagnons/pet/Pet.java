@@ -48,7 +48,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * Deux animations se combinent : celle du compagnon entier (rebond, montée et descente...), commune à toutes les
  * pièces, et celle que le modèle donne à certaines pièces (ailes, oreilles...). Une pièce ne reçoit jamais qu'une
  * cible à la fois : la prochaine image clé de l'une ou de l'autre, calculée avec les deux. Un changement de texture
- * (clignement) part avec la cible en cours, pour ne pas faire sauter le trajet.
+ * (clignement) part avec la cible en cours, pour ne pas faire sauter le trajet. Quand le propriétaire clique sur son
+ * compagnon, un saut remplace l'animation du compagnon entier le temps de quelques images clés.
  *
  * Les joueurs qui voient le compagnon sont exactement ceux qui voient son propriétaire (événements de suivi de
  * Paper) plus le propriétaire lui-même. Un propriétaire invisible n'est plus vu de personne : son compagnon
@@ -104,6 +105,18 @@ public final class Pet {
     private int segmentStart;
     private Animation.Frame frameFrom = Animation.Frame.REST;
     private Animation.Frame frame = Animation.Frame.REST;
+
+    // Saut au clic du propriétaire : part de la hauteur du saut à chaque image clé, une toutes les HOP_STEP ticks (un
+    // saut, puis un petit rebond). reactionKey : prochaine image clé du saut (-1 : pas de saut en cours) ;
+    // reactionBase : position du compagnon au départ du saut, où il retombe ; clock : dernier tick vu
+    private static final float[] HOP = {0.75f, 1.0f, 0.75f, 0.0f, 0.3f, 0.0f};
+    private static final int HOP_STEP = 2;
+    private static final double CLICK_REACH = 4.5;
+    private int clock;
+    private boolean reactionAsked;
+    private int reactionKey = -1;
+    private Animation.Frame reactionBase = Animation.Frame.REST;
+    private int reactionReadyTick;
 
     // Animation propre aux pièces du modèle. poses : dernière pose visée par pièce (repère du modèle) ; looks :
     // apparence affichée ; poseDue, lookDue : tick de la prochaine image clé et du prochain changement d'apparence
@@ -219,6 +232,45 @@ public final class Pet {
     /** Ce joueur a-t-il le modèle chez lui ? */
     public boolean shownTo(UUID viewer) {
         return shown.containsKey(viewer);
+    }
+
+    /** Joueurs qui ont le modèle chez eux. */
+    public java.util.Collection<Player> viewers() {
+        return shown.values();
+    }
+
+    /**
+     * Clic du propriétaire. S'il vise son compagnon (son regard passe dans la sphère qui entoure le modèle, à portée
+     * de main) et que le délai depuis la dernière réaction est passé, le compagnon saute au prochain tick. Rend
+     * alors la position du centre du modèle, sinon null. Le calcul se fait là où le client du propriétaire affiche
+     * le modèle : au sommet de sa hitbox, tourné de la dernière orientation envoyée.
+     */
+    public synchronized double[] click() {
+        UUID ownerId = owner.getUniqueId();
+        if (hidden || removed || clock < reactionReadyTick || !shown.containsKey(ownerId) || preloading.containsKey(ownerId)) {
+            return null;
+        }
+        Location eye = owner.getEyeLocation();
+        if (!attached && eye.getWorld() != freeWorld) {
+            return null;
+        }
+        Vector3d root = rootPosition();
+        Vector3fc offset = type.placement().offset();
+        double yaw = Math.toRadians(sentYaw);
+        double cos = Math.cos(yaw);
+        double sin = Math.sin(yaw);
+        double x = root.getX() + offset.x() * cos - offset.z() * sin - eye.getX();
+        double y = root.getY() + offset.y() + frame.offset().y() - eye.getY();
+        double z = root.getZ() + offset.x() * sin + offset.z() * cos - eye.getZ();
+        org.bukkit.util.Vector look = eye.getDirection();
+        double along = x * look.getX() + y * look.getY() + z * look.getZ();
+        double radius = type.radius() + settings.click().aimMargin();
+        if (along < 0 || along > CLICK_REACH || x * x + y * y + z * z - along * along > radius * radius) {
+            return null;
+        }
+        reactionAsked = true;
+        reactionReadyTick = clock + Math.max(settings.click().cooldownTicks(), HOP.length * HOP_STEP + 2);
+        return new double[] {x + eye.getX(), y + eye.getY(), z + eye.getZ()};
     }
 
     /** Premier affichage : tous ceux qui voient déjà le propriétaire, et lui-même. */
@@ -350,7 +402,9 @@ public final class Pet {
 
     /** Un tick du serveur (fil principal). */
     public synchronized void tick(int now) {
+        clock = now;
         if (hidden || removed) {
+            reactionAsked = false;
             return;
         }
         boolean invisibleNow = owner.isInvisible();
@@ -359,6 +413,10 @@ public final class Pet {
             applyInvisibility();
         }
         trackActivity(now);
+        if (reactionAsked) {
+            reactionAsked = false;
+            startReaction(now);
+        }
         if (!pending.isEmpty()) {
             spawnPending(now);
         }
@@ -409,6 +467,20 @@ public final class Pet {
             resting = true;
             rest();
         }
+    }
+
+    /** Départ du saut au clic : il part de la position affichée à cet instant, et réveille un compagnon au repos. */
+    private void startReaction(int now) {
+        lastActiveTick = now;
+        if (resting) {
+            resting = false;
+            animationTime = 0;
+            partsEpoch = Integer.MIN_VALUE;
+        }
+        reactionBase = frameAt(now);
+        frame = reactionBase;
+        reactionKey = 0;
+        nextKeyframeTick = now;
     }
 
     private void spawnPending(int now) {
@@ -667,10 +739,25 @@ public final class Pet {
      * aux pièces animées du modèle. Le client fait chaque trajet seul, de ce qu'il affiche à la cible, en « durée » ticks.
      */
     private void animate(int now) {
-        boolean moves = type.animation().moves();
+        boolean moves = reactionKey >= 0 || type.animation().moves();
         boolean whole = moves && now >= nextKeyframeTick;
         boolean turns = false;
-        if (whole) {
+        if (whole && reactionKey >= HOP.length) {
+            // Saut terminé, le compagnon est retombé à son point de départ : son animation reprend où elle en était
+            reactionKey = -1;
+            moves = type.animation().moves();
+            whole = moves;
+        }
+        if (whole && reactionKey >= 0) {
+            frameFrom = frame;
+            frame = new Animation.Frame(
+                new Vector3f(reactionBase.offset()).add(0, HOP[reactionKey] * settings.click().hopHeight(), 0), reactionBase.spin());
+            // Un compagnon qui tournait sur lui-même s'arrête à l'angle du départ : la rotation part avec la première image clé
+            turns = reactionKey == 0 && reactionBase.spin() != 0;
+            reactionKey++;
+            segmentStart = now;
+            nextKeyframeTick = now + HOP_STEP;
+        } else if (whole) {
             Animation animation = type.animation();
             double next = animation.nextKey(animationTime);
             int duration = Math.max(1, (int) Math.round((next - animationTime) / type.animationSpeed()));
@@ -786,6 +873,7 @@ public final class Pet {
 
     /** Repos : toutes les pièces reviennent doucement à la pose et à l'apparence de base du modèle, à sa position neutre. */
     private void rest() {
+        reactionKey = -1;
         frame = Animation.Frame.REST;
         frameFrom = frame;
         animationTime = 0;

@@ -25,6 +25,16 @@ pet_save_error: "{prefix}&cErreur lors de la sauvegarde de votre compagnon."
 pet_remove_db_error: "{prefix}&cErreur lors du retrait de votre compagnon de la base de données."
 pet_type_no_longer_available_on_reload: "{prefix}&eVotre ancien type de compagnon n'est plus disponible et a été retiré."
 
+# Clic d'un joueur sur son compagnon : une de ces phrases, tirée au hasard, sans préfixe (elle s'affiche au-dessus de
+# la barre d'objets ou dans le chat, selon companion_settings.click.message). Liste vide ([]) : aucune phrase.
+click_phrases:
+  - "&7Votre compagnon &e{pet_display_name} &7sautille de joie &c❤"
+  - "&7Votre compagnon &e{pet_display_name} &7est ravi de vous voir &c❤"
+  - "&7Votre compagnon &e{pet_display_name} &7adore qu'on s'occupe de lui &c❤"
+  - "&7Votre compagnon &e{pet_display_name} &7en redemande &c❤"
+  - "&7Votre compagnon &e{pet_display_name} &7vous suivrait au bout du monde &c❤"
+  - "&7Votre compagnon &e{pet_display_name} &7se sent aimé &c❤"
+
 # Celui qui exécute les commandes admin
 admin_no_permission_command: "&8&l« &f&lSH &8&l» &fCommande inconnue, essayer autre chose."
 admin_no_permission_subcommand: "&8&l« &f&lSH &8&l» &fCommande inconnue, essayer autre chose."

@@ -155,6 +155,16 @@ Après sa pose de base, un fichier de modèle peut décrire des animations : le 
 
 L'[atelier](atelier/README.md) fabrique ces modèles, les rend en image tels que le plugin les lit et chiffre leur coût réseau.
 
+## Clic sur son compagnon
+
+Un joueur qui vise son compagnon et clique le fait sauter (un saut puis un petit rebond, vus de tous ceux qui voient le compagnon), avec une particule au-dessus de lui. Le joueur entend le son du compagnon et lit une phrase tirée au hasard dans `click_phrases` de `messages.yml`, au-dessus de sa barre d'objets ou dans le chat.
+
+- Le compagnon n'a pas de hitbox (entités d'affichage) : le clic compte quand le regard du joueur passe sur le modèle, à portée de main. Rien n'est ajouté chez les clients et aucun paquet ne part tant que personne ne clique.
+- Clic gauche toujours. Clic droit seulement avec un objet en main ou un bloc visé : sans cela le client n'envoie rien au serveur.
+- Accroupi, le compagnon ne tourne plus avec le regard : le joueur peut se tourner vers lui pour le viser.
+- Réglages dans `companion_settings.click` (délai entre deux réactions, hauteur du saut, marge de visée, son par défaut, particule, affichage de la phrase) ; chaque compagnon peut avoir son son (`click.sound`, `click.pitch`).
+- Coût d'un saut : 6 images clés par entité du modèle et par joueur qui voit le compagnon, au plus une fois par `cooldown_ticks`.
+
 ## Dépendances
 
 - Obligatoires : `packetevents`
