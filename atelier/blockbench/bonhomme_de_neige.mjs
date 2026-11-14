@@ -1,39 +1,44 @@
-// Bonhomme de neige : il fond doucement et fait comme si de rien n'était. Seau de travers sur la tête, nez en carotte,
-// écharpe, bras en brindilles, une flaque sous lui et des gouttes qui tombent. Au clic sa tête glisse, il la rattrape et la remet.
-import { COMMUN, IDLE, WALK, frimousse, mix, balance, tient, regarde, tic, flotte, paire } from './_style.mjs';
+// Bonhomme de neige : le bonhomme de neige de Noël. Haut-de-forme à ruban rouge et houx, de travers, nez en carotte,
+// écharpe rayée rouge et vert dont un pan pend, boutons de charbon, bras en brindilles fourchues.
+// Au clic il soulève son chapeau pour saluer, les bras en l'air.
+import { COMMUN, IDLE, WALK, frimousse, mix, balance, tient, regarde, tic, paire } from './_style.mjs';
+import { mirrored } from '../bbkit.mjs';
 
-const B = paire('bras', { parent: 'corps', pivot: [3.3, 4.4, 0], rot: [0, 0, 28] }, { bord: false, from: [3.3, 4, -0.4], to: [6.7, 4.7, 0.4], faces: { all: 'm' } });
+const B = paire('bras', { parent: 'corps', pivot: [3, 5.4, 0], rot: [0, 0, 26] }, { bord: false, from: [3, 5, -0.4], to: [6.8, 5.8, 0.4], faces: { all: ['mmmM'], up: 'm' } });
+const fourche = { name: 'fourcheD', bone: 'brasD', bord: false, from: [5, 5.6, -0.3], to: [5.6, 7.3, 0.3], rot: [0, 0, -32], pivot: [5.3, 5.7, 0], faces: { all: 'm', up: 'M' } };
+const raies = ['rrggrrgg'];
+const ruban = ['nnnnnnnn', 'nnnnnnnn', 'nnnnnnnn', 'nnnnnnnn', 'nnnnnnnn', 'rrrrrrrr', 'rrrrrrrr', 'nnnnnnnn'];
 
 export default {
     name: 'bonhomme_de_neige',
     title: 'Bonhomme de neige',
-    palette: { ...COMMUN, w: '#f8fbff', o: '#f79a2e', a: '#aab2bf', A: '#8a93a1', g: '#45ad72', G: '#2f8757', m: '#7a5438', u: '#bfe6f7', U: { c: '#9fd6f0' } },
+    palette: { ...COMMUN, w: '#f9fcff', s: '#dfeaf5', o: '#f7902a', O: '#d9741a', n: '#2e2b33', r: '#d93a3a', g: '#3fa35c', G: { c: '#2f8a49' }, R: { c: '#f04a4a' }, m: '#7a5438', M: '#5e3f29', c: { c: '#2f2a30' }, f: { c: '#ffffff' } },
     bones: {
-        root: { pivot: [0, 0, 0] }, corps: { parent: 'root', pivot: [0, 1.4, 0] }, tete: { parent: 'corps', pivot: [0, 6.6, 0], rot: [0, 0, 6] }, seau: { parent: 'tete', pivot: [0, 11.6, 0], rot: [0, 0, -14] },
-        pan: { parent: 'corps', pivot: [-1.9, 6, -3.5] }, goutte1: { parent: 'root', pivot: [3.6, 4, -2] }, goutte2: { parent: 'root', pivot: [-3.4, 3, 2.4] }, ...B.bones,
+        root: { pivot: [0, 0, 0] }, corps: { parent: 'root', pivot: [0, 0.6, 0] }, tete: { parent: 'corps', pivot: [0, 7.6, 0] },
+        chapeau: { parent: 'tete', pivot: [0, 12.6, 0], rot: [0, 0, -9] }, pan: { parent: 'corps', pivot: [-1.9, 6.9, -3.5] }, ...B.bones,
     },
     cubes: [
-        { name: 'flaque', bone: 'root', bord: false, from: [-4.6, 0.3, -4.6], to: [4.6, 1, 4.6], faces: { all: 'u', up: ['uuuuuuuu', 'uuUuuuuu', 'uuuuuuUu', 'uuuuuuuu', 'uUuuuuuu', 'uuuuuUuu', 'uuuuuuuu', 'uuuuuuuu'] } },
-        { name: 'boule', bone: 'corps', bord: 'haut', from: [-3.5, 1, -3.5], to: [3.5, 6.4, 3.5], faces: { all: ['wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'uwwwwwwu'], north: ['wwwwwwww', 'wwwkkwww', 'wwwwwwww', 'wwwkkwww', 'wwwwwwww', 'wwwkkwww', 'wwwwwwww', 'uuwwwwuu'] } },
-        { name: 'tete', bone: 'tete', from: [-2.9, 6.4, -2.9], to: [2.9, 11.6, 2.9], faces: { all: 'w', north: frimousse('w', { ligne: 2 }) } },
-        { name: 'nez', bone: 'tete', bord: false, from: [-0.6, 8, -5.3], to: [0.6, 9.2, -2.9], rot: [-10, 0, 0], pivot: [0, 8.6, -2.9], faces: { all: 'o' } },
-        { name: 'seau', bone: 'seau', from: [-2.4, 11.4, -2.4], to: [2.4, 14.2, 2.4], faces: { all: ['AAAAAAAA', 'aaaaaaaa', 'aaaaaaaa', 'aaaaaaaa'], up: 'A' } },
-        { name: 'echarpe', bone: 'corps', bord: false, from: [-3.3, 5.8, -3.3], to: [3.3, 7.1, 3.3], faces: { all: ['ggGGggGG', 'ggGGggGG'], up: 'g', down: 'g' } },
-        { name: 'pan', bone: 'pan', bord: false, from: [-2.6, 3.2, -4], to: [-1.2, 6, -3.4], faces: { all: ['gggg', 'GGGG', 'gggg', 'GGGG'] } },
-        ...B.cubes,
-        { name: 'goutte1', bone: 'goutte1', bord: false, from: [3.3, 3.6, -2.3], to: [3.9, 4.4, -1.7], faces: { all: 'U' } },
-        { name: 'goutte2', bone: 'goutte2', bord: false, from: [-3.7, 2.6, 2.1], to: [-3.1, 3.4, 2.7], faces: { all: 'U' } },
+        { name: 'socle', bone: 'corps', bord: 'haut', from: [-3.9, 0.6, -3.9], to: [3.9, 2.6, 3.9], faces: { all: ['wwwwwwww', 'ssssssss'], up: 'w', down: 's' } },
+        { name: 'ventre', bone: 'corps', bord: 'haut', from: [-3.2, 2.6, -3.2], to: [3.2, 7.2, 3.2], faces: { all: 'w', north: ['wwwwwwww', 'wwwwwwww', 'wwwccwww', 'wwwccwww', 'wwwwwwww', 'wwwccwww', 'wwwccwww', 'wwwwwwww'] } },
+        { name: 'tete', bone: 'tete', from: [-2.8, 7.6, -2.8], to: [2.8, 12.6, 2.8], faces: { all: 'w', north: frimousse('w', { ligne: 2 }) } },
+        { name: 'nez', bone: 'tete', bord: false, from: [-0.55, 8.9, -5.2], to: [0.55, 10, -2.8], rot: [-8, 0, 0], pivot: [0, 9.4, -2.8], faces: { all: ['oooO'], north: 'O', east: ['Oooo'], up: ['oo', 'oo', 'oo', 'OO'], down: 'O' } },
+        { name: 'echarpe', bone: 'corps', bord: false, from: [-3.1, 6.7, -3.1], to: [3.1, 8, 3.1], faces: { all: raies, up: 'r', down: 'r' } },
+        { name: 'pan', bone: 'pan', bord: false, from: [-2.7, 3.5, -3.9], to: [-1.1, 6.9, -3.3], faces: { all: ['rrrr', 'rrrr', 'gggg', 'gggg', 'rrrr', 'rrrr', 'gggg', 'RgRg'] } },
+        { name: 'bord', bone: 'chapeau', bord: false, from: [-3.5, 12.5, -3.5], to: [3.5, 13.2, 3.5], faces: { all: 'n' } },
+        { name: 'calotte', bone: 'chapeau', from: [-2.4, 13.2, -2.4], to: [2.4, 16.2, 2.4], faces: { all: ruban, north: ['nnnnnnnn', 'nnnnnnnn', 'nnnnnnnn', 'nnnnnnnn', 'nnnnnGGn', 'rrrrGRGr', 'rrrrrGGr', 'nnnnnnnn'], up: 'n', down: 'n' } },
+        ...B.cubes, fourche, mirrored(fourche, 'fourcheG', 'brasG'),
     ],
     animations: {
-        idle: { length: IDLE, bones: mix(regarde(undefined, IDLE, 10, 3), balance('brasD', [0, 0, 8], IDLE, { tours: 2 }), balance('brasG', [0, 0, 8], IDLE, { tours: 2 }), balance('pan', [0, 0, 7], IDLE, { tours: 2 }), tic('seau', [0, 0, 7], 2.7), flotte('goutte1', -2.6, IDLE / 3, 0), flotte('goutte2', -1.8, IDLE / 3, 0.5)) },
-        walk: { length: WALK, bones: mix(tient('corps', [-6, 0, 0]), balance('pan', [14, 0, 0], WALK), balance('brasD', [0, 0, 12], WALK), balance('brasG', [0, 0, 12], WALK, { phase: 1 })) },
+        idle: { length: IDLE, bones: mix(regarde(undefined, IDLE, 10, 3), balance('brasD', [0, 0, 7], IDLE, { tours: 2 }), balance('brasG', [0, 0, 7], IDLE, { tours: 2 }), balance('pan', [0, 0, 6], IDLE, { tours: 2 }), tic('chapeau', [0, 0, 6], 2.7)) },
+        walk: { length: WALK, bones: mix(tient('corps', [-6, 0, 0]), balance('pan', [14, 0, 0], WALK), balance('brasD', [0, 0, 12], WALK), balance('brasG', [0, 0, 12], WALK, { phase: 1 }), balance('chapeau', [0, 0, 4], WALK)) },
         interact: {
-            length: 1.8, loop: false,
+            length: 1.6, loop: false,
             bones: {
-                tete: { position: [[0, [0, 0, 0]], [0.35, [2.6, -1.2, 0]], [0.9, [3.6, -2.6, 0]], [1.2, [0, 1.2, 0]], [1.4, [0, 0, 0]]], rotation: [[0, [0, 0, 0]], [0.35, [0, 0, -24]], [0.9, [0, 0, -40]], [1.2, [0, 0, 6]], [1.4, [0, 0, 0]]] },
-                brasD: { rotation: [[0.3, [0, 0, 0]], [0.6, [0, 0, -30]], [0.9, [0, 0, -30]], [1.2, [0, 0, 40]], [1.5, [0, 0, 0]]] },
-                brasG: { rotation: [[0.3, [0, 0, 0]], [0.6, [0, 0, 50]], [0.9, [0, 0, 50]], [1.5, [0, 0, 0]]] },
-                seau: { rotation: [[0, [0, 0, 0]], [0.35, [0, 0, -12]], [1.2, [0, 0, 10]], [1.5, [0, 0, 0]]] },
+                chapeau: { position: [[0, [0, 0, 0]], [0.3, [1.2, 3, 0]], [0.9, [1.2, 3, 0]], [1.2, [0, -0.3, 0]], [1.35, [0, 0, 0]]], rotation: [[0, [0, 0, 0]], [0.3, [0, 0, -24]], [0.9, [0, 0, -24]], [1.2, [0, 0, 4]], [1.35, [0, 0, 0]]] },
+                brasG: { rotation: [[0, [0, 0, 0]], [0.3, [0, 0, -42]], [0.9, [0, 0, -42]], [1.2, [0, 0, 0]]] },
+                brasD: { rotation: [[0, [0, 0, 0]], [0.3, [0, 0, 16]], [0.5, [0, 0, 30]], [0.7, [0, 0, 16]], [0.9, [0, 0, 30]], [1.2, [0, 0, 0]]] },
+                tete: { rotation: [[0, [0, 0, 0]], [0.3, [10, 0, 0]], [0.9, [10, 0, 0]], [1.2, [-4, 0, 0]], [1.4, [0, 0, 0]]] },
+                corps: { rotation: [[0, [0, 0, 0]], [0.3, [-6, 0, 0]], [0.9, [-6, 0, 0]], [1.2, [0, 0, 0]]] },
             },
         },
     },

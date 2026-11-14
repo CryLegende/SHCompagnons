@@ -13,7 +13,7 @@ Notre modèle de référence maison est le capybara (`capybara.mjs`), validé pa
 1. **Une idée qui tient en une phrase.** Chaque compagnon est un animal ou un objet croisé avec une idée, et la phrase dit ce qu'il est et ce qu'il fait : un grille-pain dont les tartines sautent quand il est content, un chat qui ne quitte jamais son carton, une chaussette qui cherche sa jumelle, un cône de chantier toujours planté là où il ne faut pas. Un animal seul, même mignon, n'est pas une idée. **On écrit la phrase avant de poser le premier cube** ; si elle ne fait pas sourire, on en cherche une autre.
 2. **Le corps est l'idée.** L'objet ou l'animal se reconnaît à sa silhouette seule : la coquille est une théière, la carapace une tartine, le bocal a des bottes. Les pattes et les bras sont minuscules ou absents.
 3. **Un accessoire planté de travers.** Presque tous ont une pièce en diagonale qui casse les boîtes : une pelle dans le sable, une cuillère dans le miel, un pinceau dans la peinture, des aiguilles dans la pelote, une clé dans le dos, une paille. C'est le détail qui donne la vie.
-4. **Des petits cubes qui flottent.** Vapeur, bulles, flocons, quartiers de fruit : un ou deux cubes détachés du corps, qui montent ou tournent.
+4. **Des détails, pas des petits cubes qui flottent.** Les références ont souvent un ou deux cubes détachés du corps (vapeur, bulles, flocons). Cry n'en veut pas chez nous (14 novembre 2026 : « deux blocs inutiles autour ») : les pièces qui restent sous la limite servent à des détails posés sur le compagnon (pépites en relief, cartes dans un ruban, branchies, fermoir, palmes). Un cube détaché ne se garde que s'il est l'idée elle-même (le « z » du dormeur, la flamme du dragonneau).
 5. **Des couches et des débordements.** Un couvercle entrouvert, un rebord, un glaçage qui coule sur les côtés, de la chantilly : des étages plutôt qu'un bloc lisse.
 6. **Le même visage partout.** Deux yeux sombres, hauts et étroits, assez rapprochés, posés au milieu ou en bas de la face ; une joue rose sous chacun, vers l'extérieur. Presque jamais de bouche. C'est ce visage constant sur des corps très différents qui fait la collection.
 7. **Peu de couleurs, franches.** Deux ou trois teintes vives, un clair, un sombre. Les motifs sont de gros pixels (vichy, pois, rayures), les détails sont des cubes.
@@ -26,8 +26,9 @@ Beaucoup de leurs modèles tiennent en 5 à 12 cubes (29 sur 48) : la personnali
 ## Nos contraintes
 
 - **Pas de resource pack** : chaque cube est une tête de joueur étirée (8 x 8 pixels par face), ou un bloc du jeu (`block:`, pour le translucide), ou un objet du jeu tenu à plat (`item:`).
-- **12 pièces au plus** par compagnon (limite du plugin) : chaque pièce coûte à chaque joueur qui regarde. On dépense les pièces dans cet ordre : silhouette de l'idée, accessoire planté, visage en relief (museau, bec), cubes flottants ; les pattes viennent après.
+- **12 pièces au plus** par compagnon (limite du plugin) : chaque pièce coûte à chaque joueur qui regarde. On dépense les pièces dans cet ordre : silhouette de l'idée, accessoire planté, visage en relief (museau, bec), détails ; les pattes viennent après.
 - **Une créature ou un personnage du jeu reste lui-même** (retour de Cry, 14 novembre 2026) : il garde son vrai visage, pris sur sa texture d'origine (`_officiel.mjs` : `officiel()`, `peau()`), sans yeux ni joues du style, et on ne lui invente pas d'accessoire. Le visage du style est pour les animaux, les objets et les créatures inventées.
+- **Un socle ne bouge pas** : quand un compagnon est posé sur quelque chose (flaque, assiette, tas d'or des slimes), ce socle reste immobile et le compagnon rebondit dessus (os `root` pour le socle, voir `_slime.mjs`).
 - **Porté à l'épaule** : le compagnon flotte. Ses pattes pendent et bougent, elles ne restent jamais figées.
 
 ## Règles de dessin
@@ -42,7 +43,7 @@ Beaucoup de leurs modèles tiennent en 5 à 12 cubes (29 sur 48) : la personnali
 - `frimousse('f')` : yeux de 1 x 2 rapprochés (colonnes 2 et 5), plus bas, pour un visage plat (objet, oiseau, créature sans museau). C'est le visage des références.
 - Œil `#2b1b12`, jamais noir pur ; joue `#ef9c88` ou une teinte voisine du corps s'il est rose ou sombre.
 - Museau, bec ou groin : un petit cube clair en avant, nez et bouche dessinés dessus, en petit.
-- Exceptions : les créatures et personnages du jeu (villageois, slimes, ghasts), qui gardent leur vrai visage ; le bébé Warden, sans yeux.
+- Exceptions : les créatures et personnages du jeu (villageois, ghasts), qui gardent leur vrai visage. Sur un corps sombre (Sculk, Dragonnet de l'End) les yeux gardent la forme du style mais prennent une couleur lumineuse.
 
 ### Couleurs et textures
 - Couleurs claires et franches : en jeu les côtés d'une tête sont rendus à mi-luminosité.
@@ -53,7 +54,7 @@ Beaucoup de leurs modèles tiennent en 5 à 12 cubes (29 sur 48) : la personnali
 ### Animations
 | État | Quand | Contenu |
 |---|---|---|
-| `idle` (6 s) | il flotte, immobile | respiration, regard, un tic, pattes qui se balancent, cubes flottants qui montent, l'accessoire qui vit |
+| `idle` (6 s) | il flotte, immobile | respiration, regard, un tic, pattes qui se balancent, l'accessoire qui vit |
 | `walk` (0,7 s) | son propriétaire avance | pattes qui pédalent, corps penché, accessoire qui ballotte |
 | `interact` (1,2 à 2 s) | clic du propriétaire | la réaction de l'idée, qui finit dans la pose de repos |
 
@@ -72,36 +73,49 @@ Une ligne par compagnon : son idée, ce qui se voit, ce qu'il fait au clic. À t
 | Shiba | ne lâche jamais son bâton | bâton trop large en travers de la gueule, bandana rouge | fait la révérence du jeu, queue en folie |
 | Teckel | déguisé en hot-dog | pain de chaque côté, zigzag de moutarde | s'étire comme un accordéon |
 | Panda roux | dort tout le temps | bonnet de nuit, queue en écharpe, « z » qui flottent | se réveille en sursaut, bras en l'air |
-| Lapin | lapin de magicien | assis dans un haut-de-forme, baguette | disparaît dans le chapeau et ressort |
+| Lapin | lapin de magicien | assis dans un haut-de-forme, baguette, nœud papillon, deux cartes dans le ruban | disparaît dans le chapeau et ressort |
 | Éléphant | a peur de la souris posée sur sa tête | petite souris grise sur le crâne | la souris couine, il sursaute, oreilles écartées |
 | Hérisson | cueilleur | pomme, feuille et champignon piqués sur le dos | se roule en boule |
 | Tortue | porte une île sur son dos | carapace en bloc d'herbe, petit arbre, coffre | rentre la tête, l'arbre tremble |
-| Ornithorynque | plongeur | masque et tuba de travers, bulles | plonge en vrille |
+| Ornithorynque | plongeur | masque et tuba de travers, palmes jaunes | plonge en vrille |
 | Jeb le mouton | arc-en-ciel à cause de son étiquette | laine en anneaux, étiquette de nom qui pend | bondit en vrille |
 | Araignée (Halloween) | petite sorcière au bout de son fil | chapeau pointu, fil blanc | descend et remonte sur son fil |
 | Abeille | butineuse | marguerite tenue contre elle, ailes de verre | looping |
 | Manchot | serveur | nœud papillon, plateau et son poisson | lance le poisson et le gobe |
 | Poulet | couveuse | assise dans son nid de paille, œufs | pond un œuf de plus |
 | Caneton (Pâques) | pas fini d'éclore | assis dans sa coquille peinte, l'autre moitié en chapeau | se cache dans l'œuf et ressort |
-| Perroquet | pirate | tricorne, bandeau sur l'œil | bat des ailes en dansant, le chapeau saute |
+| Perroquet | pirate | tricorne à tête de mort de travers | bat des ailes en dansant, le chapeau saute |
 | Nounours | peluche rapiécée | pièces de tissu, un œil en bouton, rembourrage qui sort | ouvre les bras pour un câlin |
-| Panda | gourmand | bambou tenu à deux pattes, feuille sur la tête | roulade arrière |
-| Bébé Yoda | dans sa nacelle | bol de bouillon, boule argentée qui lévite | la Force : la boule tourne autour de lui |
+| Panda | gourmand | bambou tenu à deux pattes, feuille sur la tête, taches grises autour des yeux du style | roulade arrière |
+| Bébé Yoda | dans sa nacelle | bol de bouillon, boule argentée qui lévite, yeux du style | la Force : la boule tourne autour de lui |
 | Villageois | marchand ambulant | son vrai visage (sourcil, yeux verts, gros nez), chapeau de paille, bras croisés, étal avec une émeraude et une miche de pain | fait non de la tête, présente l'émeraude, finit par dire oui |
 | Among Us | promène son mini sur la tête | mini équipier jaune perché, qui regarde de l'autre côté | bondit en vrille, le mini saute encore plus haut |
-| Slime | le slime du jeu, tel quel | son vrai visage dans la gelée, rien d'autre | s'écrase et rebondit |
-| Slime bleu | aquarium | vrai visage de slime, un poisson nage dans la gelée, bulles | s'écrase et rebondit |
-| Slime doré | petit roi et son trésor | vrai visage de slime, couronne de travers, pépite qui tourne dans la gelée | s'écrase et rebondit |
-| Slime en chocolat | dessert | vrai visage de slime, chantilly, cerise, gaufrette plantée | s'écrase et rebondit |
+| Slime | slime des marais et son petit | nénuphar de travers et sa fleur ; dans sa flaque : un roseau, un petit nénuphar, un tout petit slime qui l'imite | s'écrase et bondit en vrille sur sa flaque, le petit bondit à son tour |
+| Slime bleu | petite mer | écume, voilier à fanion qui tangue ; au bord de l'eau : un crabe, une bouée | bondit en vrille, le voilier décolle, le crabe lève les pinces |
+| Slime doré | petit roi sur son tas d'or | couronne de travers au joyau rouge ; sur le tas : deux piles de pièces, un rubis | bondit en vrille, la couronne saute, le rubis tourne |
+| Slime en chocolat | dessert servi sur son assiette | nappage qui coule, chantilly, cerise, gaufrette plantée ; sur l'assiette : cuillère, fraise, carré de chocolat | bondit en vrille, la cerise saute |
 | Ghast | le ghast du jeu, tel quel | son vrai visage, six tentacules | se gonfle et tremble, tentacules écartés |
 | Happy Ghast | le happy ghast du jeu | son sourire, lunettes relevées sur le front, harnais, coussin | se gonfle de joie |
-| Cookie | sort du four | debout sur sa spatule, coin croqué, miettes, vapeur | saute comme une crêpe et retombe sur la spatule |
+| Cookie | sort du four | debout sur sa spatule, coin croqué, grosses pépites en relief | saute comme une crêpe et retombe sur la spatule |
 | Cadeau du Père Noël | pressé d'être ouvert | bonnet de Père Noël, étiquette | le couvercle saute, une étoile sort |
-| Bonhomme de neige | fond doucement | seau de travers, carotte, écharpe, flaque, gouttes | sa tête glisse, il la rattrape et la remet |
-| Champignon | grand timide | chapeau trop grand rabattu sur les yeux, rainette posée dessus, spores | rabat son chapeau et tremble, la rainette saute |
-| Ananas (été) | se prend pour un cocktail | lunettes de soleil, ombrelle en papier qui tourne, paille rayée | baisse ses lunettes, l'ombrelle s'emballe |
-| Obsidienne | escargot dont la coquille est un portail du Nether | cadre d'obsidienne, voile violet, deux yeux au bout des antennes | rentre dans son portail et ressort |
-| Sculk | bébé Warden qui ne supporte pas le bruit | cornes rayées, gros casque antibruit orange | sursaute, plaque ses mains sur son casque, secoue la tête |
+| Bonhomme de neige (Noël) | le bonhomme de neige de Noël | haut-de-forme à ruban rouge et houx, carotte, écharpe rayée rouge et vert, boutons de charbon, brindilles fourchues | soulève son chapeau pour saluer |
+| Champignon | grand timide | chapeau trop grand rabattu sur les yeux, pois en relief, rainette et tout petit champignon dessus | rabat son chapeau et tremble, la rainette saute |
+| Obsidienne | escargot dont la coquille est un portail du Nether | cadre d'obsidienne ébréché (un bloc qui pleure, un bloc tombé), voile violet, yeux au bout des antennes | rentre dans son portail et ressort |
+| Sculk | petit bloc de sculk à l'écoute du moindre bruit (le compagnon d'origine, dans le style) | yeux turquoise lumineux, tapis de veines, quatre capteurs, cœur d'âmes, dents d'os | sursaute, capteurs écartés qui vibrent, cœur qui s'emballe |
+| Tison | dragonneau qui fait griller sa guimauve tout seul | petite flamme devant le museau, guimauve dorée au bout d'un bâton, ailes qui battent | prend son souffle et crache une vraie flamme |
+| Dragonnet de l'End | ne lâche jamais son œuf | écailles sombres, ailes violettes, yeux magenta, œuf de dragon dans les bras | l'œuf se téléporte au-dessus de sa tête, il le rattrape |
+| Méduse | un petit poisson vit caché dans ses tentacules | cloche qui se gonfle, six tentacules, poisson orange | le poisson file faire le tour de la méduse et revient |
+| Axolotl | fait le mort, comme le vrai | branchies au vent, crête, sourire | se retourne sur le dos, pattes en l'air, puis se remet d'aplomb |
+| Grimoire | livre enchanté qui flotte | plume plantée de travers, ruban rouge, fermoir doré, pierre sertie | s'ouvre en grand, ses runes jaillissent, se referme d'un coup |
+| Pain d'épices (Noël) | il lui manque déjà un coin de tête | glaçage, boutons en bonbon, nœud papillon, sucre d'orge | danse d'un pied sur l'autre |
+| Lapin en chocolat (Pâques) | a très peur d'être mangé | papier doré à moitié défait, oreille croquée, ruban et grelot | tremble, l'oreille se couche, le grelot tinte |
+| Fantôme (Halloween) | à la chasse aux bonbons | drap rapiécé qui traîne, seau citrouille, sucette plantée de travers | fait « bouh », bras en l'air, la sucette saute |
+| Flamant rose (été) | ne sait pas nager : il garde sa bouée | bouée rouge et blanche, longues pattes qui pédalent, bec crochu | fait tourner sa bouée comme un cerceau |
+| Crabe (été) | tient sa glace bien haut | cornet à deux boules dans la pince levée, petites pattes qui gigotent | pas de crabe d'un côté puis de l'autre, la boule vacille |
+
+### Compagnons d'évènement
+
+Quatre évènements : Noël, Pâques, Halloween, été. Le fichier du modèle porte l'évènement (`noel_`, `paques_`, `halloween_`, `ete_`). Le menu leur réserve cinq places chacun dans « Compagnons spéciaux » ; on part de deux par évènement (trois pour Noël : cadeau, bonhomme de neige, pain d'épices) pour pouvoir en ajouter un par an. L'ananas de l'été 2026 a été retiré (Cry : pas au niveau), le flamant rose le remplace.
 
 ### Gardés tels qu'ils étaient
 

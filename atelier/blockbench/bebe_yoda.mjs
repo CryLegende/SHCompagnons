@@ -1,6 +1,6 @@
 // Bébé Yoda : dans sa nacelle, son bol de soupe d'une main, il fait léviter de l'autre la boule argentée qu'il a
 // chipée au vaisseau. Au clic la boule fait le tour de sa tête, oreilles dressées.
-import { COMMUN, IDLE, WALK, mix, balance, tient, regarde, paire } from './_style.mjs';
+import { COMMUN, IDLE, WALK, visage, mix, balance, tient, regarde, paire } from './_style.mjs';
 
 const O = paire('oreille', { parent: 'tete', pivot: [3, 8.9, -0.3] }, { from: [3, 8.1, -0.9], to: [6.5, 9.6, 0.2], rot: [0, 0, 10], pivot: [3, 8.9, -0.3], faces: { all: 'g', north: ['gggg', 'gppg', 'gppg', 'gggg'] } });
 const dresse = (s) => ({ rotation: [[0, [0, 0, 0]], [0.2, [0, 0, 28 * s]], [1.3, [0, 0, 28 * s]], [1.6, [0, 0, 0]]] });
@@ -17,7 +17,7 @@ export default {
         { name: 'nacelle', bone: 'root', from: [-3.6, 1, -3.6], to: [3.6, 4.3, 3.6], faces: { all: 'm', up: 'i', north: ['mmmmmmmm', 'mmmmmmmm', 'mMMMMMMm', 'mmmmmmmm'] } },
         { name: 'rebord', bone: 'root', bord: false, from: [-3.9, 4.3, -3.9], to: [3.9, 5.1, 3.9], faces: { all: 'M', up: ['MMMMMMMM', 'MiiiiiiM', 'MiiiiiiM', 'MiiiiiiM', 'MiiiiiiM', 'MiiiiiiM', 'MiiiiiiM', 'MMMMMMMM'] } },
         { name: 'robe', bone: 'corps', from: [-2.3, 4.6, -2.1], to: [2.3, 7, 2.1], faces: { all: 'r', north: ['rrrRRrrr', 'rrrRRrrr', 'rrrRRrrr', 'rrrRRrrr'] } },
-        { name: 'tete', bone: 'tete', from: [-3, 6.6, -2.9], to: [3, 10.8, 2.5], faces: { all: 'g', north: ['gggggggg', 'gekggkeg', 'gkkggkkg', 'bbggggbb', 'gggggggg', 'gggggggg', 'gggggggg', 'gggggggg'] } },
+        { name: 'tete', bone: 'tete', from: [-3, 6.6, -2.9], to: [3, 10.8, 2.5], faces: { all: 'g', north: visage('g') } },
         ...O.cubes,
         { name: 'bras', bone: 'bras', bord: false, from: [1.5, 5.6, -4], to: [2.5, 6.4, -2], faces: { all: 'r', north: 'g' } },
         { name: 'bol', bone: 'corps', from: [-3.1, 5.1, -4], to: [-1.1, 6.1, -2.1], faces: { all: 'n', up: ['nnnn', 'nssn', 'nssn', 'nnnn'] } },

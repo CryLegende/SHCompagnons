@@ -76,6 +76,8 @@ node blockbench.mjs chemin/vers/modele.bbmodel  un projet venu d'ailleurs
 node blockbench.mjs --planche=gros capybara lapin  deux vues par modèle, en grand, à la même échelle de jeu
 node blockbench.mjs --livrer tout               copie les modèles dans le plugin, écrit sortie/echelles.json
 node blockbench.mjs --planche=famille tout      refait la planche de famille (sortie/famille.png)
+node televerse.mjs [modèle ...] [--seuls]       envoie les têtes à MineSkin, les modèles nommés d'abord (--seuls : eux seulement)
+node icones-bb.mjs                               icône de menu de chaque compagnon : la tête qui porte son visage (sortie/icones-bb.txt)
 MINESKIN_KEY=<clé> node televerse.mjs           envoie les têtes, puis relancer blockbench.mjs
 ```
 

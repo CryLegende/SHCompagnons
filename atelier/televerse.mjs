@@ -1,6 +1,8 @@
 // Téléverse sur MineSkin les peaux de sortie/peaux qui n'ont pas encore d'empreinte Mojang et range le résultat dans
 // textures.json (sha de peau → empreinte textures.minecraft.net). Relançable : ce qui est déjà fait n'est pas refait.
-// Usage : MINESKIN_KEY=<clé> node televerse.mjs      (sans clé : 10 envois par minute)
+// Usage : MINESKIN_KEY=<clé> node televerse.mjs [modèle ...]      (sans clé : 10 envois par minute)
+//   Les modèles nommés passent en premier, dans l'ordre donné (quota horaire : on choisit ce qui est prêt d'abord).
+//   --seuls : n'envoie que les têtes des modèles nommés (les autres attendent, par exemple un dessin pas encore arrêté).
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,9 +19,12 @@ let todo = readdirSync(DIR).filter((f) => f.endsWith('.png')).map((f) => f.repla
 // le moins de têtes d'abord : avec un quota horaire, des compagnons entiers sont prêts plus tôt
 const byModel = join(HERE, 'sortie', 'peaux-modeles.json');
 if (existsSync(byModel)) {
-    const models = Object.entries(JSON.parse(readFileSync(byModel, 'utf8'))).map(([name, shas]) => [name, shas.filter((sha) => todo.includes(sha))]).filter(([, shas]) => shas.length).sort((a, b) => a[1].length - b[1].length);
+    const only = process.argv.includes('--seuls');
+    const first = process.argv.slice(2).filter((x) => !x.startsWith('--')), rank = (name) => (first.includes(name) ? first.indexOf(name) : first.length);
+    const models = Object.entries(JSON.parse(readFileSync(byModel, 'utf8'))).map(([name, shas]) => [name, shas.filter((sha) => todo.includes(sha))]).filter(([, shas]) => shas.length).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1].length - b[1].length);
     const ordered = [...new Set(models.flatMap(([, shas]) => shas))];
-    todo = [...ordered, ...todo.filter((sha) => !ordered.includes(sha))];
+    const named = [...new Set(models.filter(([name]) => first.includes(name)).flatMap(([, shas]) => shas))];
+    todo = only ? named : [...ordered, ...todo.filter((sha) => !ordered.includes(sha))];
     console.log('ordre : ' + models.map(([name, shas]) => name + ' (' + shas.length + ')').join(', '));
 }
 console.log(todo.length + ' peau(x) à téléverser');

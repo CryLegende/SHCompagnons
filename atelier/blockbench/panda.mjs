@@ -2,12 +2,12 @@
 // museau. Au clic il part en roulade arrière et se rassoit, tout étonné.
 import { peluche } from './_peluche.mjs';
 
-const tache = ['wwwwwwww', 'wdewwedw', 'wddwwddw', 'bbwwwwbb', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww'];
+const tache = ['wwwwwwww', 'wPPwwPPw', 'PPkwwkPP', 'wPkwwkPw', 'bbwwwwbb', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww'];
 
 export default peluche({
     name: 'panda',
     title: 'Panda',
-    palette: { w: '#f8f5ee', d: '#40394a', e: { c: '#ffffff' }, n: { c: '#2b1b12' }, m: { c: '#bdb4aa' }, g: '#7cc54a', G: '#4f9a31', p: '#6a6270', v: { c: '#7cc54a' } },
+    palette: { w: '#f8f5ee', d: '#40394a', P: { c: '#5d5566' }, k: { c: '#1c1418' }, n: { c: '#2b1b12' }, m: { c: '#bdb4aa' }, g: '#7cc54a', G: '#4f9a31', p: '#6a6270', v: { c: '#7cc54a' } },
     lettres: { corps: 'w', bras: 'd', oreille: 'd', museau: 'w' },
     dessins: {
         ventre: ['dddddddd', 'dddddddd', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww'],

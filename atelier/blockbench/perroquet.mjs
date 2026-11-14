@@ -1,4 +1,4 @@
-// Perroquet : le pirate. Tricorne noir à tête de mort de travers, bandeau sur un œil, ailes rouge, jaune et bleu.
+// Perroquet : le pirate. Tricorne noir à tête de mort de travers, ailes rouge, jaune et bleu.
 // Au clic il déploie les ailes et danse, son chapeau saute et retombe de travers.
 import { COMMUN, IDLE, DEUX, mix, balance, tient, respire, regarde, bat, pendouille, paire } from './_style.mjs';
 
@@ -16,8 +16,7 @@ export default {
     },
     cubes: [
         { name: 'ventre', bone: 'ventre', from: [-2.5, 2.6, -2.2], to: [2.5, 8, 2.6], faces: { all: 'r' } },
-        // Bandeau : l'œil droit du perroquet (à gauche pour qui le regarde) est caché, la sangle fait le tour de la tête
-        { name: 'tete', bone: 'tete', from: [-2.7, 7.4, -3.6], to: [2.7, 12.4, 1.6], faces: { all: ['rrrrrrrr', 'NNNNNNNN', 'rrrrrrrr', 'rrrrrrrr'], north: ['rrrrrrrr', 'wNNNrwkw', 'wNNNrwkw', 'bbwrrwbb', 'rrrrrrrr', 'rrrrrrrr', 'rrrrrrrr', 'rrrrrrrr'], up: 'r', down: 'r' } },
+        { name: 'tete', bone: 'tete', from: [-2.7, 7.4, -3.6], to: [2.7, 12.4, 1.6], faces: { all: 'r', north: ['rrrrrrrr', 'wkwrrwkw', 'wkwrrwkw', 'bbwrrwbb', 'rrrrrrrr', 'rrrrrrrr', 'rrrrrrrr', 'rrrrrrrr'], up: 'r', down: 'r' } },
         { name: 'bec', bone: 'tete', bord: false, from: [-0.9, 8.1, -5.2], to: [0.9, 10.2, -3.6], faces: { all: ['cccc', 'cccc', 'cccc', 'dddd'], up: 'c', down: 'd' } },
         { name: 'bord', bone: 'chapeau', bord: false, from: [-3.8, 12.3, -4.6], to: [3.8, 13, 2.6], faces: { all: 'n' } },
         { name: 'calotte', bone: 'chapeau', from: [-2.3, 13, -3.2], to: [2.3, 15, 1.2], faces: { all: 'n', north: ['nnnnnnnn', 'nnxxxxnn', 'nnxNNxnn', 'nnnxxnnn'] } },
