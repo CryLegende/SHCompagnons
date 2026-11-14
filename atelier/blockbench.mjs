@@ -8,6 +8,7 @@
 // Options :
 //   --planche=<nom>   une seule image sortie/<nom>.png : deux vues par modèle, tous à la même échelle de jeu
 //   --cote            les états vus de côté
+//   --zoom            images des états deux fois plus grandes ; --etats=interact,walk : seulement ces états
 //   --echelle=0.4     échelle de jeu forcée (sinon celle de la description, sinon calculée : voir CORPS)
 //   --tolerance=0.15  écart accepté (pixels du modèle) entre le mouvement voulu et celui que le client affichera
 //   --sans-rendu      conversion seule
@@ -66,7 +67,7 @@ for (const arg of names) {
     for (const w of made.warnings) console.log('  ! ' + w);
     if (made.parts > 12) console.log('  ! ' + made.parts + ' pièces : plus que la limite de 12');
     files.push(join(OUT, name + '.txt'));
-    info[name] = { scale, yaw: 0, side: args.includes('--cote') };
+    info[name] = { scale, yaw: 0, side: args.includes('--cote'), zoom: args.includes('--zoom'), only: text('etats') ? text('etats').split(',') : null };
     scales[name] = { scale, parts: made.parts, states: Object.fromEntries(made.states.map((s) => [s.name, +cost(s)])) };
     if (args.includes('--livrer')) writeFileSync(join(PLUGIN, 'src/main/resources/models', name + '.txt'), made.text);
 }

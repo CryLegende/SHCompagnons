@@ -3,6 +3,7 @@
 ## D'où vient le style
 
 La référence est la collection de compagnons de https://banqueroute.github.io/#companions (48 modèles : 38 compagnons et 10 de Noël), que Cry a donnée comme cible le 14 novembre 2026 : « là-bas tous les compagnons ont de la personnalité ». On s'en inspire, on ne les copie pas : aucun de leurs modèles n'est repris, ni leur idée quand elle est propre à l'un d'eux (le renard à la lanterne, l'escargot-théière, le mouton-nuage...).
+Exception demandée par Cry le 14 novembre 2026 au soir : Nouille, Piquant, Carton et Boulon sont refaits d'après leurs fiches, au plus près (« recopier au mieux possible »), mais construits ici cube par cube : aucun fichier de leur site n'est repris.
 
 Les captures de leurs 48 fiches, au repos et pendant leur réaction au clic, sont gardées hors du dépôt (elles appartiennent à leur auteur) : `Optimisation Hetzner/_tools/blockdisplay/refs-compagnons/` sur le poste de Cry (`*-a-repos.png` : une rangée de fiches par image ; `*-b`, `-c`, `-d` : la même rangée pendant la réaction ; `fiches.json` : noms et descriptions). **Les regarder avant de dessiner un compagnon.** `node refs.mjs` (voir l'atelier) les refait si elles manquent.
 
@@ -75,18 +76,18 @@ Une ligne par compagnon : son idée, ce qui se voit, ce qu'il fait au clic. À t
 | Panda roux | dort tout le temps | bonnet de nuit, queue en écharpe, « z » qui flottent | se réveille en sursaut, bras en l'air |
 | Lapin | lapin de magicien | assis dans un haut-de-forme, baguette, nœud papillon, deux cartes dans le ruban | disparaît dans le chapeau et ressort |
 | Éléphant | a peur de la souris posée sur sa tête | petite souris grise sur le crâne | la souris couine, il sursaute, oreilles écartées |
-| Hérisson | cueilleur | pomme, feuille et champignon piqués sur le dos | se roule en boule |
+| Hérisson | cueilleur | pomme, feuille et champignon piqués sur le dos | se roule en boule et rebondit : son butin saute en l'air et retombe pile sur ses piquants, il se déroule et renifle |
 | Tortue | porte une île sur son dos | carapace en bloc d'herbe, petit arbre, coffre | rentre la tête, l'arbre tremble |
-| Ornithorynque | plongeur | masque et tuba de travers, palmes jaunes | plonge en vrille |
+| Ornithorynque | plongeur | masque et tuba de travers, palmes jaunes | grande inspiration, plonge la tête la première en battant des palmes, remonte d'un bond et s'ébroue |
 | Jeb le mouton | arc-en-ciel à cause de son étiquette | laine en anneaux, étiquette de nom qui pend | bondit en vrille |
 | Araignée (Halloween) | petite sorcière au bout de son fil | chapeau pointu, fil blanc | descend et remonte sur son fil |
-| Abeille | butineuse | marguerite tenue contre elle, ailes de verre | looping |
+| Abeille | butineuse | marguerite tenue contre elle, ailes de verre | danse frétillante (deux courses en se trémoussant, une boucle de chaque côté), puis tend sa marguerite |
 | Manchot | serveur | nœud papillon, plateau et son poisson | lance le poisson et le gobe |
 | Poulet | couveuse | assise dans son nid de paille, œufs | pond un œuf de plus |
 | Caneton (Pâques) | pas fini d'éclore | assis dans sa coquille peinte, l'autre moitié en chapeau | se cache dans l'œuf et ressort |
 | Perroquet | pirate | tricorne à tête de mort de travers | bat des ailes en dansant, le chapeau saute |
 | Nounours | peluche rapiécée | pièces de tissu, un œil en bouton, rembourrage qui sort | ouvre les bras pour un câlin |
-| Panda | gourmand | bambou tenu à deux pattes, feuille sur la tête, taches grises autour des yeux du style | roulade arrière |
+| Panda | gourmand | bambou tenu à deux pattes, feuille sur la tête, taches grises autour des yeux du style | croque son bambou trois fois (la tige raccourcit), se tapote le ventre tout rond, la feuille sautille |
 | Bébé Yoda | dans sa nacelle | bol de bouillon, boule argentée qui lévite, yeux du style | la Force : la boule tourne autour de lui |
 | Villageois | marchand ambulant | son vrai visage (sourcil, yeux verts, gros nez), chapeau de paille, bras croisés, étal avec une émeraude et une miche de pain | fait non de la tête, présente l'émeraude, finit par dire oui |
 | Among Us | promène son mini sur la tête | mini équipier jaune perché, qui regarde de l'autre côté | bondit en vrille, le mini saute encore plus haut |
@@ -112,6 +113,12 @@ Une ligne par compagnon : son idée, ce qui se voit, ce qu'il fait au clic. À t
 | Fantôme (Halloween) | à la chasse aux bonbons | drap rapiécé qui traîne, seau citrouille, sucette plantée de travers | fait « bouh », bras en l'air, la sucette saute |
 | Flamant rose (été) | ne sait pas nager : il garde sa bouée | bouée rouge et blanche, longues pattes qui pédalent, bec crochu | fait tourner sa bouée comme un cerceau |
 | Crabe (été) | tient sa glace bien haut | cornet à deux boules dans la pince levée, petites pattes qui gigotent | pas de crabe d'un côté puis de l'autre, la boule vacille |
+| Nouille | dragon nouille qui ondule dans l'air (d'après banqueroute) | long corps turquoise en trois segments au ventre crème, bois crème, moustaches dorées, crête et nageoires rouge orangé | fait un looping complet, le corps enroulé dans la boucle, les moustaches qui fouettent |
+| Boulon | robot à remonter (d'après banqueroute) | tête-écran aux yeux cyan, cœur rouge sur la poitrine, antenne à boule rouge, boulons aux tempes, clé dorée dans le dos qui tourne doucement | on le remonte : la clé fait trois tours, il cliquette d'un côté à l'autre en agitant les bras, puis bondit de joie |
+| Carton | chat qui ne quitte jamais son carton (d'après banqueroute) | chat gris aux oreilles roses, pattes blanches posées sur le bord, rabats ouverts en biais, ruban adhésif, croix et flèche « haut » sur les flancs, queue qui dépasse | plonge au fond du carton, jette un œil par-dessus le bord à gauche puis à droite, ressort d'un coup |
+| Piquant | bébé cactus qui sautille dans son pot (d'après banqueroute) | côtes vert foncé, épines blanches, bras levé en L et petit bras, fleur rose au cœur jaune, pot en terre cuite à rebord | bondit hors du pot bras en l'air, la fleur fait un tour, retombe, rebondit et se tortille |
+| Kappa | esprit des rivières très poli, sa coupelle d'eau sur le crâne (inspiré de Japanese style Pets, mcmodels.net) | coupelle pleine d'eau, frange bleu-vert, bec, carapace, concombre croqué serré dans les bras | salue bien bas, l'eau se renverse, il panique, la coupelle se remplit et il saute de soulagement |
+| Maneki | le chat porte-bonheur en céramique (inspiré du même pack) | chat tricolore assis, patte levée qui fait signe, grosse pièce d'or de travers, collier rouge et grelot | appelle la chance à toute vitesse, la pièce saute en tournant au-dessus de sa tête et retombe dans sa patte |
 
 ### Compagnons d'évènement
 
@@ -119,7 +126,19 @@ Quatre évènements : Noël, Pâques, Halloween, été. Le fichier du modèle po
 
 ### Gardés tels qu'ils étaient
 
-Steve, Alex, le zombie, R2-D2 et le golem de cuivre ne sont pas refaits : Cry préfère les modèles d'origine (corps mieux proportionnés, têtes moins étranges, le golem ressemble au vrai). Leurs fichiers `src/main/resources/models/*.txt` et leur bloc de config.yml restent ceux de la branche principale ; ils viennent de `atelier/modeles/` (ancien atelier) ou de block-display.com pour le golem. Ne pas les recréer dans `blockbench/`.
+Steve, Alex, le zombie, R2-D2 et le golem de cuivre gardent leur apparence : Cry préfère leurs modèles d'origine (corps mieux proportionnés, têtes moins étranges, le golem ressemble au vrai). Ils ont reçu le 14 novembre 2026 les trois états du style, sans rien changer à leur forme ni à leurs têtes :
+
+- `node garde.mjs <nom> [--demitour]` relit l'ancien fichier de modèle et écrit `blockbench/garde/<nom>.json` (mêmes pièces, mêmes faces pixel par pixel) ; il ajoute à `textures.json` l'empreinte d'origine de chaque tête, donc rien n'est téléversé et la tête montrée en jeu reste la même. `--demitour` pour le golem, qui regardait vers l'arrière (rotation y 170 dans la config, retirée ensuite par `config_blockbench.py`).
+- `blockbench/<nom>.mjs` range ces pièces dans des os (`_garde.mjs` : `garde()`, `OS_PERSO`, `PIECES_PERSO`) et écrit idle, walk et interact. L'échelle de la description reprend celle de la config (0,42 ; R2-D2 0,5 ; golem 0,3).
+- Ne pas redessiner ces cinq-là dans le style : seules leurs animations sont à nous.
+
+| Compagnon | Au repos | Au clic |
+|---|---|---|
+| Steve | regarde autour de lui, brandit sa pioche au-dessus de l'épaule | pioche trois fois sur le côté et brandit sa pioche |
+| Alex | fait coucou de la main | saute de joie en tournant sur elle-même, les deux bras en l'air |
+| Zombie | dodeline, bras tendus qui tanguent | se penche en grognant et griffe l'air des deux mains |
+| R2-D2 | le dôme regarde de gauche à droite, le voyant passe du rouge au bleu (une petite pièce bleue posée sur le voyant rouge) ; il se dandine en avançant | le dôme fait un tour complet, il se balance d'un pied sur l'autre en sautillant, le voyant clignote |
+| Golem de cuivre | regarde autour de lui, le paratonnerre frémit | le paratonnerre tourne comme une hélice et le soulève, il bat des bras, puis titube en se posant |
 
 ## Créer un compagnon
 

@@ -1,7 +1,10 @@
 // Hérisson : le cueilleur. Il rapporte sur ses piquants tout ce qu'il trouve : une pomme, une feuille d'automne, un champignon.
-// Au clic il se roule en boule et fait une roulade.
-import { COMMUN, IDLE, WALK, TOUR, visage, mix, tient, respire, regarde, tic, pendouille, pedale, salto, pattes4, squelette } from './_style.mjs';
+// Au clic il se roule en boule, rebondit, et son butin saute en l'air puis retombe pile sur ses piquants ; il se
+// déroule et renifle pour vérifier que tout y est.
+import { COMMUN, IDLE, WALK, visage, mix, tient, respire, regarde, tic, pendouille, pedale, pattes4, squelette } from './_style.mjs';
 
+const z = [0, 0, 0];
+const boule = (a) => ({ rotation: [[0, z], [0.2, [a, 0, 0]], [1.3, [a, 0, 0]], [1.5, z]] });
 const P = pattes4({ x: 1.9, zAv: -0.3, zAr: 4.0, size: [1.6, 2.4, 1.6], faces: { all: 'p' } });
 const piquants = ['ssssSsss', 'sSssssss', 'ssssssSs', 'sssSssss', 'Ssssssss', 'sssssSss', 'ssSsssss', 'ssssssss'];
 const crete = (name, z) => ({ name, bone: 'corps', bord: false, from: [-2.6, 7.2, z], to: [2.6, 8.9, z + 1.4], rot: [-22, 0, 0], pivot: [0, 7.4, z + 0.7], faces: { all: 's', up: 'S', north: ['sSssSssS', 'ssssssss'], south: ['sSssSssS', 'ssssssss'] } });
@@ -25,12 +28,18 @@ export default {
         idle: { length: IDLE, bones: mix(respire(), regarde(undefined, IDLE, 8), tic('butin', [0, 0, 6], 2.6), pendouille()) },
         walk: { length: WALK, bones: mix(pedale(undefined, 30), tient('corps', [-5, 0, 0])) },
         interact: {
-            length: TOUR, loop: false,
-            bones: mix(salto('root', 1, 2.5), {
-                tete: { rotation: [[0, [0, 0, 0]], [0.15, [-55, 0, 0]], [0.95, [-55, 0, 0]], [1.2, [0, 0, 0]]], position: [[0, [0, 0, 0]], [0.15, [0, -0.6, 1.6]], [0.95, [0, -0.6, 1.6]], [1.2, [0, 0, 0]]] },
-                patteAvD: { rotation: [[0, [0, 0, 0]], [0.15, [-70, 0, 0]], [0.95, [-70, 0, 0]], [1.2, [0, 0, 0]]] }, patteAvG: { rotation: [[0, [0, 0, 0]], [0.15, [-70, 0, 0]], [0.95, [-70, 0, 0]], [1.2, [0, 0, 0]]] },
-                patteArD: { rotation: [[0, [0, 0, 0]], [0.15, [70, 0, 0]], [0.95, [70, 0, 0]], [1.2, [0, 0, 0]]] }, patteArG: { rotation: [[0, [0, 0, 0]], [0.15, [70, 0, 0]], [0.95, [70, 0, 0]], [1.2, [0, 0, 0]]] },
-            }),
+            length: 1.9, loop: false,
+            bones: {
+                tete: { rotation: [[0, z], [0.2, [-50, 0, 0]], [1.3, [-50, 0, 0]], [1.5, [6, 0, 0]], [1.6, [6, 12, 0]], [1.7, [6, -12, 0]], [1.8, [4, 6, 0]], [1.9, z]], position: [[0, z], [0.2, [0, -0.6, 1.6]], [1.3, [0, -0.6, 1.6]], [1.5, z]] },
+                patteAvD: boule(-70), patteAvG: boule(-70), patteArD: boule(70), patteArG: boule(70),
+                corps: { rotation: [[0, z], [0.2, [14, 0, 0]], [1.0, [14, 0, 0]], [1.08, [14, 0, 7]], [1.16, [14, 0, -7]], [1.24, [14, 0, 4]], [1.3, [14, 0, 0]], [1.5, z]] },
+                ventre: { scale: [[0, [1, 1, 1]], [0.2, [1.04, 1.06, 0.94]], [0.32, [1.12, 0.86, 1.04]], [0.45, [0.98, 1.1, 0.96]], [0.6, [1.04, 1.06, 0.94]], [0.82, [1.1, 0.9, 1.02]], [0.95, [1.04, 1.06, 0.94]], [1.3, [1.04, 1.06, 0.94]], [1.5, [1, 1, 1]]] },
+                root: { position: [[0, z], [0.2, z], [0.32, [0, -0.6, 0]], [0.55, [0, 2.6, 0]], [0.82, z], [0.92, [0, 0.5, 0]], [1.0, z]] },
+                butin: {
+                    position: [[0, z], [0.32, [0, -0.3, 0]], [0.6, [0, 5.2, 0]], [0.78, [0, 6.2, 0]], [0.95, [0, 3.4, 0]], [1.08, [0, -0.4, 0]], [1.16, [0, 0.4, 0]], [1.24, z]],
+                    rotation: [[0.32, z], [0.78, [0, 180, 12]], [1.08, [0, 360, 0]]],
+                },
+            },
         },
     },
 };
