@@ -24,8 +24,15 @@ import java.util.logging.Logger;
  */
 public final class ModelLibrary {
 
-    /** Modèle prêt à afficher : pièces recentrées et taille d'origine (blocs). */
-    public record Model(String name, List<Part> parts, Vector3f size) {
+    /** État d'un modèle fait dans Blockbench : nom (idle, walk, interact...), durée en ticks, joué une seule fois ou en boucle. */
+    public record State(String name, int length, boolean once) {
+    }
+
+    /**
+     * Modèle prêt à afficher : pièces recentrées, taille d'origine (blocs) et états (vide pour un modèle sans états ;
+     * le mouvement de chaque pièce dans l'état n° i est part.stateTrack(i)).
+     */
+    public record Model(String name, List<Part> parts, Vector3f size, List<State> states) {
 
         /** Nombre de pièces qui ont leur propre animation (mouvement ou changement d'apparence). */
         public int animatedParts() {
@@ -67,7 +74,7 @@ public final class ModelLibrary {
             String key = name.substring(0, dot).toLowerCase(Locale.ROOT);
             try {
                 SummonImporter.Source source = extension.equals("yml")
-                    ? new SummonImporter.Source(YamlConfiguration.loadConfiguration(file).getStringList("display.spawn-command"), List.of())
+                    ? new SummonImporter.Source(YamlConfiguration.loadConfiguration(file).getStringList("display.spawn-command"), List.of(), List.of())
                     : SummonImporter.split(Files.readString(file.toPath(), StandardCharsets.UTF_8));
                 if (source.base().isEmpty()) {
                     logger.warning("Modèle " + name + " : aucune commande /summon trouvée.");
@@ -95,7 +102,23 @@ public final class ModelLibrary {
                 for (SummonImporter.Clip clip : source.clips()) {
                     animate(parts, centered, bounds, clip, name, logger);
                 }
-                library.models.put(key, new Model(key, Collections.unmodifiableList(parts), bounds.size()));
+                List<State> states = new ArrayList<>(source.states().size());
+                if (!source.states().isEmpty()) {
+                    Track[][] byState = new Track[source.states().size()][];
+                    for (int s = 0; s < byState.length; s++) {
+                        SummonImporter.State state = source.states().get(s);
+                        byState[s] = SummonImporter.stateTracks(state, centered, bounds);
+                        states.add(new State(state.name(), state.length(), state.once()));
+                    }
+                    for (int i = 0; i < parts.size(); i++) {
+                        Track[] tracks = new Track[byState.length];
+                        for (int s = 0; s < byState.length; s++) {
+                            tracks[s] = byState[s][i];
+                        }
+                        parts.set(i, parts.get(i).withStates(tracks));
+                    }
+                }
+                library.models.put(key, new Model(key, Collections.unmodifiableList(parts), bounds.size(), Collections.unmodifiableList(states)));
             } catch (IOException | RuntimeException e) {
                 logger.log(Level.WARNING, "Modèle " + name + " illisible : " + e.getMessage());
             }

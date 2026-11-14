@@ -74,18 +74,44 @@ public class Vide {
                     }
                 }
             }
-            for (int i = 0; i < base.size(); i++) if (tracks[i] != null || cycles[i] != null) animated++;
+            // États d'un modèle fait dans Blockbench : les images clés de chaque pièce, état par état
+            String[] byState = new String[base.size()];
+            StringBuilder stateList = new StringBuilder();
+            for (SummonImporter.State state : source.states()) {
+                Track[] own = SummonImporter.stateTracks(state, base, bounds);
+                int stateKeys = 0, moving = 0;
+                for (int i = 0; i < base.size(); i++) {
+                    if (own[i] == null) continue;
+                    moving++;
+                    StringBuilder t = new StringBuilder("\"" + state.name() + "\":{\"loop\":" + state.length() + ",\"keys\":[");
+                    int tick = 0;
+                    for (int k = 0; k < own[i].keys(); k++) {
+                        if (k > 0) t.append(',');
+                        t.append("{\"tick\":").append(tick).append(',').append(affine(own[i].at(tick))).append('}');
+                        tick = own[i].nextTick(tick);
+                        stateKeys++;
+                    }
+                    byState[i] = (byState[i] == null ? "" : byState[i] + ",") + t.append("]}");
+                }
+                if (stateList.length() > 0) stateList.append(',');
+                stateList.append("{\"name\":\"").append(state.name()).append("\",\"length\":").append(state.length()).append(",\"once\":").append(state.once())
+                    .append(",\"keys\":").append(stateKeys).append(",\"moving\":").append(moving).append('}');
+                keys += stateKeys;
+            }
+            for (int i = 0; i < base.size(); i++) if (tracks[i] != null || cycles[i] != null || byState[i] != null) animated++;
             var size = bounds.size();
             if (n > 1) out.append(',');
             var center = bounds.center();
             out.append('"').append(name).append("\":{\"size\":[").append(size.x).append(',').append(size.y).append(',').append(size.z)
-                .append("],\"center\":[").append(center.x).append(',').append(center.y).append(',').append(center.z).append("],\"parts\":[");
+                .append("],\"center\":[").append(center.x).append(',').append(center.y).append(',').append(center.z)
+                .append("],\"states\":[").append(stateList).append("],\"parts\":[");
             for (int i = 0; i < base.size(); i++) {
                 SummonImporter.RawPart part = base.get(i);
                 if (i > 0) out.append(',');
                 out.append("{\"k\":\"").append(part.type()).append("\",\"w\":\"").append(what(part)).append("\",").append(affine(part.transform()));
                 if (tracks[i] != null) out.append(",\"track\":").append(tracks[i]);
                 if (cycles[i] != null) out.append(",\"looks\":").append(cycles[i]);
+                if (byState[i] != null) out.append(",\"states\":{").append(byState[i]).append('}');
                 out.append('}');
             }
             out.append("]}");

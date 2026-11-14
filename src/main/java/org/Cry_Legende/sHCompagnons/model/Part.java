@@ -72,13 +72,19 @@ public final class Part {
     private final List<EntityData<?>> staticData;
     private final Track track;
     private final Looks looks;
+    private final Track[] states;
 
     private Part(EntityType type, Affine transform, List<EntityData<?>> staticData, Track track, Looks looks) {
+        this(type, transform, Collections.unmodifiableList(staticData), track, looks, null);
+    }
+
+    private Part(EntityType type, Affine transform, List<EntityData<?>> staticData, Track track, Looks looks, Track[] states) {
         this.type = type;
         this.transform = transform;
-        this.staticData = Collections.unmodifiableList(staticData);
+        this.staticData = staticData;
         this.track = track;
         this.looks = looks;
+        this.states = states;
     }
 
     public EntityType type() {
@@ -107,14 +113,27 @@ public final class Part {
         return looks;
     }
 
+    /**
+     * Mouvement de la pièce dans un état du modèle (numéro de l'état dans le modèle), null si elle y garde sa pose
+     * de base ou si le modèle n'a pas d'états.
+     */
+    public Track stateTrack(int state) {
+        return states == null || state < 0 ? null : states[state];
+    }
+
     /** Cette pièce avec un mouvement. */
     public Part withTrack(Track track) {
-        return new Part(type, transform, staticData, track, looks);
+        return new Part(type, transform, staticData, track, looks, states);
     }
 
     /** Cette pièce avec un cycle d'apparences, dont la première est sa première métadonnée. */
     public Part withLooks(Looks looks) {
-        return new Part(type, transform, staticData, track, looks);
+        return new Part(type, transform, staticData, track, looks, states);
+    }
+
+    /** Cette pièce avec son mouvement dans chaque état du modèle (null là où elle ne bouge pas). */
+    public Part withStates(Track[] states) {
+        return new Part(type, transform, staticData, track, looks, states);
     }
 
     /** Apparence d'une tête de joueur, pour un cycle de textures. */

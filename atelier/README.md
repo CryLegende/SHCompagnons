@@ -63,6 +63,30 @@ Le « corps » est le côté du cube de même volume que les pièces du modèle 
 
 Un modèle réservé à un évènement porte son nom en préfixe (`halloween_araignee`, `paques_canard`, `ete_ananas`).
 
+## Modèles faits dans Blockbench
+
+Un modèle dessiné et animé dans Blockbench (format « Generic Model », « Per-face UV ») devient un compagnon sans resource pack : chaque cube est rendu par une tête de joueur étirée qui porte ses six faces, chaque animation devient un état (`idle` au repos, `walk` quand il avance, `interact` au clic de son propriétaire).
+
+```text
+node blockbench.mjs capybara                    blockbench/capybara.bbmodel → sortie/capybara.txt, peaux, sortie/capybara.png
+node blockbench.mjs --garder capybara           même chose sans réécrire le projet depuis sa description (projet retouché à la main)
+node blockbench.mjs chemin/vers/modele.bbmodel  un projet venu d'ailleurs
+MINESKIN_KEY=<clé> node televerse.mjs           envoie les têtes, puis relancer blockbench.mjs
+```
+
+- `blockbench/<nom>.bbmodel` est le projet : il s'ouvre et se retouche dans Blockbench (cubes, texture, animations).
+- `blockbench/<nom>.mjs`, s'il existe, est la description qui a servi à l'écrire (`bbkit.mjs` : os, cubes aux faces dessinées case par case, images clés). Elle réécrit le projet à chaque lancement : après une retouche dans Blockbench, passer `--garder` ou supprimer la description.
+- `bbmodel.mjs` fait la conversion. Ses calculs (pose des cubes, textures des faces, animations) ont été comparés à ce que Blockbench 5.2.2 affiche : écart sous 0,0001 pixel.
+- Le rendu montre quatre vues puis une ligne d'images par état, avec le coût de chaque état en paquets par seconde.
+
+Règles de dessin :
+
+- Une face de tête montre 8 x 8 pixels. Une face de cube large ou haute de 1, 2, 4 ou 8 pixels de texture est reprise à l'identique ; les autres largeurs sont rééchantillonnées (3 passe, 5 à 7 donnent des pixels inégaux).
+- Pas de transparence ni de pixels lumineux sur une tête : un pixel transparent prend la couleur moyenne du cube.
+- Un cube = une entité : 12 au plus, comme pour les autres modèles.
+- Chaque image clé d'une pièce coûte un paquet. Le client va en ligne droite d'une image clé à la suivante : une animation dont toutes les pièces basculent entre deux poses aux mêmes instants (la marche du capybara) coûte deux paquets par pièce et par cycle ; une courbe lissée en coûte davantage. Une pièce qui ne bouge pas dans un état ne coûte rien : garder immobile ce qui peut l'être (la tête porte aussi le museau, les oreilles et ce qui est posé dessus).
+- `--tolerance` (0,15 pixel par défaut) règle l'écart accepté entre le trajet voulu et celui que le client affichera : plus grand, moins d'images clés.
+
 ## Coût réseau
 
 ```text

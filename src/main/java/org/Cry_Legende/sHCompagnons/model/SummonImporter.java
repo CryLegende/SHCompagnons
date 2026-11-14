@@ -42,8 +42,20 @@ public final class SummonImporter {
     public record Clip(int loop, List<Pose> poses) {
     }
 
-    /** Contenu d'un fichier de modèle : commandes de la pose de base, puis animations éventuelles. */
-    public record Source(List<String> base, List<Clip> clips) {
+    /** Image clé d'une pièce dans un état : instant (ticks) et transformation, dans le repère des commandes. */
+    public record Key(int tick, Affine transform) {
+    }
+
+    /**
+     * État d'un modèle fait dans Blockbench (« idle », « walk », « interact »...) : une animation de toutes ses
+     * pièces, jouée en boucle ou une seule fois. tracks : images clés de chaque pièce qui bouge, par numéro de pièce
+     * (ordre des entités de la pose de base, à partir de 0).
+     */
+    public record State(String name, int length, boolean once, java.util.Map<Integer, List<Key>> tracks) {
+    }
+
+    /** Contenu d'un fichier de modèle : commandes de la pose de base, puis animations et états éventuels. */
+    public record Source(List<String> base, List<Clip> clips, List<State> states) {
     }
 
     /** Commandes de la pose de base d'un fichier de modèle (les animations sont ignorées). */
@@ -57,10 +69,13 @@ public final class SummonImporter {
      * block-display.com, etc.) termine la commande en cours et est ignorée. Les commandes placées avant la première
      * ligne « @animation » forment la pose de base. « @animation loop=<ticks> » ouvre une animation, « @pose <tick> »
      * une pose de cette animation : les commandes qui suivent décrivent le modèle entier à cet instant.
+     * « @state <nom> length=<ticks> [once] » ouvre un état, « @track <pièce> <tick>:<10 nombres> ... » donne les
+     * images clés d'une pièce dans cet état (translation, rotation gauche, échelle).
      */
     public static Source split(String content) {
         List<String> base = new ArrayList<>();
         List<Clip> clips = new ArrayList<>();
+        List<State> states = new ArrayList<>();
         List<String> target = base;
         StringBuilder current = null;
         for (String line : content.split("\\R")) {
@@ -85,8 +100,20 @@ public final class SummonImporter {
                     Pose pose = new Pose(directiveNumber(words, null, trimmed), new ArrayList<>());
                     clips.getLast().poses().add(pose);
                     target = pose.commands();
+                } else if (words[0].equals("@state")) {
+                    if (words.length < 2 || words[1].equals("length")) {
+                        throw new IllegalArgumentException("« " + trimmed + " » : nom de l'état attendu");
+                    }
+                    states.add(new State(words[1], directiveNumber(words, "length", trimmed),
+                        java.util.Arrays.asList(words).contains("once"), new java.util.TreeMap<>()));
+                    target = null;
+                } else if (words[0].equals("@track")) {
+                    if (states.isEmpty()) {
+                        throw new IllegalArgumentException("« @track » avant toute ligne @state");
+                    }
+                    readTrack(lower, states.getLast());
                 } else {
-                    throw new IllegalArgumentException("ligne inconnue « " + trimmed + " » (attendu : @animation loop=<ticks> ou @pose <tick>)");
+                    throw new IllegalArgumentException("ligne inconnue « " + trimmed + " » (attendu : @animation, @pose, @state ou @track)");
                 }
                 continue;
             }
@@ -106,7 +133,64 @@ public final class SummonImporter {
         if (current != null) {
             target.add(current.toString());
         }
-        return new Source(base, clips);
+        return new Source(base, clips, states);
+    }
+
+    /** Ligne « @track <pièce> <tick>:<tx,ty,tz,gx,gy,gz,gw,ex,ey,ez> ... » : images clés d'une pièce dans un état. */
+    private static void readTrack(String line, State state) {
+        String[] words = line.split("\\s+");
+        try {
+            int part = Integer.parseInt(words[1]);
+            List<Key> keys = new ArrayList<>(words.length - 2);
+            for (int w = 2; w < words.length; w++) {
+                int colon = words[w].indexOf(':');
+                int tick = Integer.parseInt(words[w].substring(0, colon));
+                String[] numbers = words[w].substring(colon + 1).split(",");
+                if (numbers.length != 10) {
+                    throw new NumberFormatException();
+                }
+                float[] v = new float[10];
+                for (int i = 0; i < 10; i++) {
+                    v[i] = Float.parseFloat(numbers[i]);
+                }
+                if (tick >= state.length() || (keys.isEmpty() ? tick != 0 : tick <= keys.getLast().tick())) {
+                    throw new IllegalArgumentException("@track " + part + " (état " + state.name()
+                        + ") : instants croissants attendus, de 0 à " + (state.length() - 1));
+                }
+                keys.add(new Key(tick, new Affine(new Vector3f(v[0], v[1], v[2]), new Quaternionf(v[3], v[4], v[5], v[6]).normalize(),
+                    new Vector3f(v[7], v[8], v[9]), new Quaternionf())));
+            }
+            if (keys.isEmpty() || state.tracks().put(part, keys) != null) {
+                throw new IllegalArgumentException("@track " + part + " (état " + state.name() + ") : vide ou donné deux fois");
+            }
+        } catch (NumberFormatException | IndexOutOfBoundsException e) {
+            throw new IllegalArgumentException("ligne @track illisible dans l'état " + state.name()
+                + " (attendu : @track <pièce> <tick>:<10 nombres séparés par des virgules> ...)");
+        }
+    }
+
+    /**
+     * Pistes d'un état, une par pièce (null là où la pièce garde sa pose de base), recentrées comme les pièces
+     * elles-mêmes. base : pièces de la pose de base déjà recentrées.
+     */
+    public static Track[] stateTracks(State state, List<RawPart> base, Bounds bounds) {
+        Vector3fc shift = bounds.center().negate();
+        Track[] tracks = new Track[base.size()];
+        for (java.util.Map.Entry<Integer, List<Key>> entry : state.tracks().entrySet()) {
+            int part = entry.getKey();
+            if (part < 0 || part >= base.size()) {
+                throw new IllegalArgumentException("@track " + part + " (état " + state.name() + ") : le modèle n'a que " + base.size() + " pièces");
+            }
+            List<Key> keys = entry.getValue();
+            int[] ticks = new int[keys.size()];
+            Affine[] poses = new Affine[keys.size()];
+            for (int k = 0; k < ticks.length; k++) {
+                ticks[k] = keys.get(k).tick();
+                poses[k] = keys.get(k).transform().shifted(shift);
+            }
+            tracks[part] = Track.ofState(state.length(), ticks, poses, base.get(part).transform());
+        }
+        return tracks;
     }
 
     /** Nombre d'une ligne @ : « @pose 10 », « @animation loop=40 » ou « @animation loop 40 ». */

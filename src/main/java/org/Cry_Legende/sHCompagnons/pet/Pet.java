@@ -168,11 +168,44 @@ public final class Pet {
     private double lastSentY;
     private double lastSentZ;
 
+    // États d'un modèle fait dans Blockbench : « idle » au repos, « walk » quand le compagnon avance, « interact »
+    // au clic de son propriétaire, joué une fois. state : numéro de l'état joué dans le modèle (-1 : modèle sans
+    // états) ; stateStart : tick de son début ; lastMoveTick : dernier tick où le compagnon avançait (avec son
+    // propriétaire s'il est porté, de lui-même s'il marche au sol). Un changement d'état amène chaque pièce en
+    // BLEND_TICKS à la pose du nouvel état, d'où qu'elle soit.
+    private static final int BLEND_TICKS = 3;
+    private static final int WALK_LINGER_TICKS = 3;
+    private final int idleState;
+    private final int walkState;
+    private final int interactState;
+    private int state;
+    private int stateStart;
+    private int lastMoveTick = Integer.MIN_VALUE / 2;
+
+    // Marche au sol (GROUND) : le compagnon se met en route quand son propriétaire s'éloigne de plus de
+    // groundDistance + GROUND_START_MARGIN et s'arrête à groundDistance ; floor : hauteur du sol sous lui, relue
+    // quand il change de bloc ou au plus tard tous les GROUND_PROBE_TICKS
+    private static final double GROUND_START_MARGIN = 0.5;
+    private static final double GROUND_MIN_STEP = 0.04;
+    private static final int GROUND_PROBE_TICKS = 10;
+    private final boolean ground;
+    private boolean walking;
+    private double floor;
+    private int floorX;
+    private int floorZ;
+    private int floorTop;
+    private int nextFloorTick;
+
     public Pet(Player owner, PetType type, ConfigManager.Settings settings) {
         this.owner = owner;
         this.type = type;
         this.settings = settings;
         this.attached = type.follow() == PetType.FollowMode.ATTACHED;
+        this.ground = type.follow() == PetType.FollowMode.GROUND;
+        this.idleState = type.state("idle");
+        this.walkState = type.state("walk");
+        this.interactState = type.state("interact");
+        this.state = idleState;
         int count = type.parts().size();
         this.ids = new int[count];
         this.uuids = new UUID[count];
@@ -206,7 +239,7 @@ public final class Pet {
             looks[i] = part.staticData().getFirst();
             any |= part.track() != null || part.looks() != null;
         }
-        this.animated = any;
+        this.animated = any || idleState >= 0;
         for (int i = 0; i < count; i++) {
             Part part = type.parts().get(i);
             if (part.type() != com.github.retrooper.packetevents.protocol.entity.type.EntityTypes.ITEM_DISPLAY) {
@@ -287,7 +320,8 @@ public final class Pet {
             return null;
         }
         reactionAsked = true;
-        reactionReadyTick = clock + Math.max(settings.click().cooldownTicks(), HOP.length * HOP_STEP + 2);
+        int reaction = interactState >= 0 ? type.states().get(interactState).length() : HOP.length * HOP_STEP;
+        reactionReadyTick = clock + Math.max(settings.click().cooldownTicks(), reaction + 2);
         return new double[] {x + eye.getX(), y + eye.getY(), z + eye.getZ()};
     }
 
@@ -440,7 +474,13 @@ public final class Pet {
                 startTurn(now);
             } else if (reactionAsked) {
                 reactionAsked = false;
-                startHop(now);
+                if (interactState >= 0) {
+                    // Le modèle a sa propre réaction : elle remplace le saut
+                    lastActiveTick = now;
+                    switchState(now, interactState);
+                } else {
+                    startHop(now);
+                }
             }
         }
         if (!pending.isEmpty()) {
@@ -455,11 +495,78 @@ public final class Pet {
         if (attached) {
             turn(now);
         } else if (now >= nextFreeTick) {
-            followFree(now);
+            if (ground) {
+                followGround(now);
+            } else {
+                followFree(now);
+            }
+        }
+        if (idleState >= 0 && !resting) {
+            chooseState(now);
         }
         if (!resting) {
             animate(now);
         }
+    }
+
+    /** Mouvement d'une pièce : celui de l'état joué pour un modèle à états, sinon celui de son animation. */
+    private Track trackOf(Part part) {
+        return state >= 0 ? part.stateTrack(state) : part.track();
+    }
+
+    /**
+     * État à jouer : la réaction au clic jusqu'à sa fin, sinon la marche tant que le compagnon avance, sinon le
+     * repos. Un modèle sans état « walk » garde « idle » en avançant.
+     */
+    private void chooseState(int now) {
+        if (state != idleState && state != walkState && now - stateStart < type.states().get(state).length()) {
+            return;
+        }
+        int wanted = walkState >= 0 && now - lastMoveTick <= WALK_LINGER_TICKS ? walkState : idleState;
+        if (wanted != state) {
+            switchState(now, wanted);
+        }
+    }
+
+    /**
+     * Passe à un autre état : chaque pièce rejoint en BLEND_TICKS la pose que le nouvel état lui donne à cet
+     * instant-là, puis suit ses images clés. Réveille un compagnon au repos.
+     */
+    private void switchState(int now, int next) {
+        state = next;
+        stateStart = now;
+        if (resting) {
+            resting = false;
+            animationTime = 0;
+            nextKeyframeTick = now;
+        }
+        partsEpoch = now;
+        int until = now + BLEND_TICKS;
+        List<List<EntityData<?>>> updates = new ArrayList<>(ids.length);
+        int[] updated = new int[ids.length];
+        for (int i = 0; i < ids.length; i++) {
+            Part part = type.parts().get(i);
+            Track track = part.stateTrack(state);
+            Affine pose = track != null ? track.at(BLEND_TICKS % track.loop()) : part.transform();
+            poseDue[i] = until;
+            lookDue[i] = now;
+            if (pose.equals(poses[i])) {
+                continue;
+            }
+            poses[i] = pose;
+            headed[i] = until;
+            Affine affine = placed(pose, frameAt(until));
+            List<EntityData<?>> data = new ArrayList<>(5);
+            data.add(new EntityData<>(Part.INTERPOLATION_DELAY, EntityDataTypes.INT, 0));
+            data.add(new EntityData<>(Part.TRANSFORMATION_DURATION, EntityDataTypes.INT, BLEND_TICKS));
+            data.add(new EntityData<>(Part.TRANSLATION, EntityDataTypes.VECTOR3F, vector(affine.translation())));
+            data.add(new EntityData<>(Part.LEFT_ROTATION, EntityDataTypes.QUATERNION, quaternion(affine.left())));
+            data.add(new EntityData<>(Part.SCALE, EntityDataTypes.VECTOR3F, vector(affine.scale())));
+            updated[updates.size()] = ids[i];
+            updates.add(data);
+        }
+        nextPartTick = until;
+        sendUpdates(updated, updates);
     }
 
     /**
@@ -469,6 +576,10 @@ public final class Pet {
      */
     private void trackActivity(int now) {
         owner.getLocation(probe);
+        // Porté par son propriétaire, le compagnon avance quand celui-ci se déplace à plat (pas quand il tourne la tête)
+        if (!ground && probe.getWorld() == seenWorld && Math.abs(probe.getX() - seenX) + Math.abs(probe.getZ() - seenZ) > 0.02) {
+            lastMoveTick = now;
+        }
         boolean moved = probe.getWorld() != seenWorld
             || Math.abs(probe.getX() - seenX) + Math.abs(probe.getY() - seenY) + Math.abs(probe.getZ() - seenZ) > 0.01
             || Math.abs(probe.getYaw() - seenYaw) + Math.abs(probe.getPitch() - seenPitch) > 1.0f;
@@ -580,7 +691,11 @@ public final class Pet {
 
     private void spawnPending(int now) {
         if (!attached && freeWorld == null) {
-            resetFree();
+            if (ground) {
+                resetGround(owner.getLocation(), now);
+            } else {
+                resetFree();
+            }
             lastSentX = freeX;
             lastSentY = freeY;
             lastSentZ = freeZ;
@@ -800,6 +915,14 @@ public final class Pet {
                 freeYaw = Location.normalizeYaw(freeYaw + Location.normalizeYaw(owner.getYaw() - freeYaw) * k);
             }
         }
+        sendFreePosition();
+    }
+
+    /**
+     * FREE et GROUND : envoie la position de la première pièce si elle a changé, et l'orientation de toutes les
+     * pièces si le compagnon a tourné (un passager ne tourne pas avec son véhicule).
+     */
+    private void sendFreePosition() {
         double moved = Math.abs(freeX - lastSentX) + Math.abs(freeY - lastSentY) + Math.abs(freeZ - lastSentZ);
         boolean turned = Math.abs(Location.normalizeYaw(freeYaw - sentYaw)) >= settings.turnThreshold();
         if (moved < 0.003 && !turned) {
@@ -808,16 +931,94 @@ public final class Pet {
         lastSentX = freeX;
         lastSentY = freeY;
         lastSentZ = freeZ;
-        sentYaw = freeYaw;
+        float yaw = turned ? freeYaw : sentYaw;
+        sentYaw = yaw;
         Vector3d position = new Vector3d(freeX, freeY, freeZ);
         for (Player viewer : shown.values()) {
-            List<PacketWrapper<?>> packets = new ArrayList<>(ids.length);
-            packets.add(new WrapperPlayServerEntityTeleport(ids[0], position, freeYaw, 0.0f, false));
-            for (int i = 1; i < ids.length; i++) {
-                packets.add(new WrapperPlayServerEntityRotation(ids[i], freeYaw, 0.0f, false));
+            List<PacketWrapper<?>> packets = new ArrayList<>(turned ? ids.length : 1);
+            packets.add(new WrapperPlayServerEntityTeleport(ids[0], position, yaw, 0.0f, false));
+            for (int i = 1; turned && i < ids.length; i++) {
+                packets.add(new WrapperPlayServerEntityRotation(ids[i], yaw, 0.0f, false));
             }
             Packets.send(viewer, packets);
         }
+    }
+
+    /**
+     * GROUND : le compagnon marche au sol vers son propriétaire quand celui-ci s'éloigne, d'autant plus vite qu'il
+     * est loin, et s'arrête à groundDistance de lui. Il regarde où il va. Trop loin (vol, téléportation, autre
+     * monde), il réapparaît près de lui.
+     */
+    private void followGround(int now) {
+        nextFreeTick = now + settings.freeUpdateTicks();
+        Location location = owner.getLocation();
+        double dx = location.getX() - freeX;
+        double dz = location.getZ() - freeZ;
+        double flat = Math.sqrt(dx * dx + dz * dz);
+        double limit = settings.freeTeleportDistance();
+        if (location.getWorld() != freeWorld || flat > limit || Math.abs(location.getY() - freeY) > limit) {
+            resetGround(location, now);
+        } else {
+            double keep = settings.groundDistance();
+            boolean go = flat > keep + (walking ? 0 : GROUND_START_MARGIN);
+            if (go) {
+                double step = Math.min(flat - keep, Math.max(GROUND_MIN_STEP, (flat - keep) * settings.freeCatchUp()));
+                freeX += dx / flat * step;
+                freeZ += dz / flat * step;
+                float heading = (float) Math.toDegrees(Math.atan2(-dx, dz));
+                freeYaw = Location.normalizeYaw(freeYaw + Location.normalizeYaw(heading - freeYaw) * 0.6f);
+                lastMoveTick = now;
+            }
+            walking = go;
+            double target = floorUnder(location, now);
+            freeY = Math.abs(target - freeY) < 0.02 ? target : freeY + (target - freeY) * 0.6;
+        }
+        sendFreePosition();
+    }
+
+    /** Place le compagnon juste derrière son propriétaire, au sol, tourné comme lui. */
+    private void resetGround(Location location, int now) {
+        double yaw = Math.toRadians(location.getYaw());
+        freeWorld = location.getWorld();
+        freeX = location.getX() + Math.sin(yaw) * 0.9;
+        freeZ = location.getZ() - Math.cos(yaw) * 0.9;
+        freeYaw = location.getYaw();
+        nextFloorTick = 0;
+        freeY = floorUnder(location, now);
+        walking = false;
+    }
+
+    /**
+     * Hauteur du sol sous le compagnon : le dessus du premier bloc plein en descendant depuis un peu plus haut que
+     * les pieds du propriétaire (le compagnon monte une marche avec lui). Sans sol à six blocs (propriétaire en
+     * vol, bord du vide) ou dans un mur, il reste à la hauteur des pieds du propriétaire.
+     */
+    private double floorUnder(Location owner, int now) {
+        int x = (int) Math.floor(freeX);
+        int z = (int) Math.floor(freeZ);
+        int top = (int) Math.floor(owner.getY() + 1.2);
+        if (x == floorX && z == floorZ && top == floorTop && now < nextFloorTick) {
+            return floor;
+        }
+        floorX = x;
+        floorZ = z;
+        floorTop = top;
+        nextFloorTick = now + GROUND_PROBE_TICKS;
+        floor = owner.getY();
+        World world = owner.getWorld();
+        if (!world.isChunkLoaded(x >> 4, z >> 4) || top >= world.getMaxHeight() || top <= world.getMinHeight()
+            || !world.getBlockAt(x, top, z).isPassable()) {
+            return floor;
+        }
+        int bottom = Math.max(world.getMinHeight(), top - 6);
+        for (int y = top - 1; y >= bottom; y--) {
+            org.bukkit.block.Block block = world.getBlockAt(x, y, z);
+            if (!block.isPassable()) {
+                floor = Math.max(y, Math.min(y + 1.0, block.getBoundingBox().getMaxY()));
+                break;
+            }
+        }
+        return floor;
     }
 
     private void resetFree() {
@@ -878,7 +1079,7 @@ public final class Pet {
         int nextPart = Integer.MAX_VALUE;
         for (int i = 0; i < ids.length; i++) {
             Part part = type.parts().get(i);
-            Track track = part.track();
+            Track track = trackOf(part);
             Looks cycle = part.looks();
             EntityData<?> look = null;
             if (cycle != null) {
@@ -923,6 +1124,11 @@ public final class Pet {
             if (!whole && look == null && !reshaped && (!moves || headed[i] == nextKeyframeTick)) {
                 continue;
             }
+            // Dans un état, une pièce ne renvoie que ce qui change par rapport à sa cible précédente (une patte qui
+            // balance ne renvoie pas sa taille) ; le client garde le reste
+            boolean inState = state >= 0;
+            boolean rotates = !inState || !pose.left().equals(poses[i].left());
+            boolean resizes = !inState || !pose.scale().equals(poses[i].scale());
             poses[i] = pose;
             headed[i] = until;
             Affine affine = placed(pose, frameAt(until));
@@ -930,11 +1136,13 @@ public final class Pet {
             data.add(new EntityData<>(Part.INTERPOLATION_DELAY, EntityDataTypes.INT, 0));
             data.add(new EntityData<>(Part.TRANSFORMATION_DURATION, EntityDataTypes.INT, Math.max(1, until - now)));
             data.add(new EntityData<>(Part.TRANSLATION, EntityDataTypes.VECTOR3F, vector(affine.translation())));
-            if (turns || reshaped) {
+            if (turns || (reshaped && rotates)) {
                 data.add(new EntityData<>(Part.LEFT_ROTATION, EntityDataTypes.QUATERNION, quaternion(affine.left())));
             }
             if (reshaped) {
-                data.add(new EntityData<>(Part.SCALE, EntityDataTypes.VECTOR3F, vector(affine.scale())));
+                if (resizes) {
+                    data.add(new EntityData<>(Part.SCALE, EntityDataTypes.VECTOR3F, vector(affine.scale())));
+                }
                 if (track.turnsRight()) {
                     data.add(new EntityData<>(Part.RIGHT_ROTATION, EntityDataTypes.QUATERNION, quaternion(affine.right())));
                 }
@@ -980,9 +1188,9 @@ public final class Pet {
             data.add(new EntityData<>(Part.TRANSFORMATION_DURATION, EntityDataTypes.INT, REST_TRANSITION_TICKS));
             data.add(new EntityData<>(Part.TRANSLATION, EntityDataTypes.VECTOR3F, vector(affine.translation())));
             data.add(new EntityData<>(Part.LEFT_ROTATION, EntityDataTypes.QUATERNION, quaternion(affine.left())));
-            if (part.track() != null) {
+            if (part.track() != null || state >= 0) {
                 data.add(new EntityData<>(Part.SCALE, EntityDataTypes.VECTOR3F, vector(affine.scale())));
-                if (part.track().turnsRight()) {
+                if (part.track() != null && part.track().turnsRight()) {
                     data.add(new EntityData<>(Part.RIGHT_ROTATION, EntityDataTypes.QUATERNION, quaternion(affine.right())));
                 }
             }

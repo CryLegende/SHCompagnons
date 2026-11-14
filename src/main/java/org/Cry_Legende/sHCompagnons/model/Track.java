@@ -63,6 +63,17 @@ public final class Track {
         return new Track(loop, keptTicks, keptPoses);
     }
 
+    /**
+     * Piste d'une pièce dans un état : images clés déjà choisies par l'atelier, gardées telles quelles. Rend null si
+     * la pièce garde sa pose de base pendant tout l'état.
+     */
+    public static Track ofState(int loop, int[] ticks, Affine[] poses, Affine base) {
+        if (ticks.length == 1 && poses[0].near(base, 1.0e-5f)) {
+            return null;
+        }
+        return new Track(loop, ticks, poses);
+    }
+
     /** Durée du cycle (ticks). */
     public int loop() {
         return loop;

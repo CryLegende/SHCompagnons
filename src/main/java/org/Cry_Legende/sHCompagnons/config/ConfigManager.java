@@ -57,7 +57,8 @@ public class ConfigManager {
         int sneakResumeTicks,
         int joinDelayTicks,
         int preloadTicks,
-        Click click
+        Click click,
+        double groundDistance
     ) {
     }
 
@@ -208,7 +209,8 @@ public class ConfigManager {
             Math.max(0, section.getInt("turn.resume_smoothing_ticks", 8)),
             Math.max(1, section.getInt("join_delay_ticks", 20)),
             Math.max(0, Math.min(60, section.getInt("preload_ticks", 12))),
-            readClick(section.getConfigurationSection("click")));
+            readClick(section.getConfigurationSection("click")),
+            clamp(section.getDouble("ground_follow.distance", 1.6), 0.5, 8.0));
     }
 
     private Click readClick(@Nullable ConfigurationSection section) {
@@ -355,8 +357,19 @@ public class ConfigManager {
                 return null;
             }
             float largest = Math.max(model.size().x, Math.max(model.size().y, model.size().z));
+            if (follow == PetType.FollowMode.GROUND) {
+                // Au sol : le modèle est posé sur ses pieds, là où le serveur place le compagnon, et regarde devant
+                // lui. Le placement de l'épaule ne s'applique pas ; seuls ses réglages propres comptent.
+                ConfigurationSection own = section.getConfigurationSection("placement");
+                float scale = own != null && own.isSet("scale") ? placement.scale() : settings.placement().scale();
+                PetType.Placement feet = new PetType.Placement(new Vector3f(0, model.size().y * scale / 2, 0), new Quaternionf(), scale);
+                placement = new PetType.Placement(
+                    own != null && own.isConfigurationSection("offset") ? placement.offset() : feet.offset(),
+                    own != null && own.isConfigurationSection("rotation") ? placement.rotation() : feet.rotation(),
+                    scale);
+            }
             return new PetType(key, displayName, model.parts(), placement, animation, speed, amplitude, follow,
-                largest * placement.scale() / 2, clickSound, clickPitch);
+                largest * placement.scale() / 2, clickSound, clickPitch, model.states());
         }
 
         List<Skin> skins = readSkins(key, section, heads);
@@ -366,7 +379,7 @@ public class ConfigManager {
         }
         // Une tête seule fait 0,5 bloc de côté à l'échelle 1
         return new PetType(key, displayName, List.of(headPart(skins)), placement, animation, speed, amplitude, follow,
-            0.25f * placement.scale(), clickSound, clickPitch);
+            0.25f * placement.scale(), clickSound, clickPitch, List.of());
     }
 
     /** Texture d'une tête et durée d'affichage (ticks). */

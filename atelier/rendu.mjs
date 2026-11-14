@@ -208,6 +208,31 @@ window.draw = async (name) => {
     }
     return canvas.toDataURL('image/png');
 };
+// Modèle à états (fait dans Blockbench) : quatre vues de la pose de base, puis une ligne de huit images par état
+window.states = async (name) => {
+    const model = MODELS[name], info = INFO[name] || {}, scale = info.scale || 0.5;
+    const W = 1600, top = 26, big = 400, small = 200, label = 18;
+    const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = top + big + model.states.length * (small + label);
+    const g = canvas.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, W, canvas.height);
+    const half = 0.5 * Math.hypot(model.size[0], model.size[1], model.size[2]) * 1.02;
+    g.fillStyle = '#000'; g.font = 'bold 15px Arial';
+    g.fillText(name + ' — ' + model.parts.length + ' pièces — échelle ' + scale + ' → ' + model.size.map((v) => (v * scale).toFixed(2)).join(' x ') + ' bloc (cadre jaune = 0,25 bloc)', 6, 18);
+    const still = { ...model, parts: model.parts.map((p) => ({ ...p, track: null })) };
+    const dirs = [[[0, 0.12, 1], 'face'], [[0.75, 0.5, 1], '3/4 avant'], [[1, 0.08, 0], 'côté'], [[-0.8, 0.6, -1], '3/4 arrière']];
+    for (let k = 0; k < 4; k++) { g.drawImage(await view(still, 0, dirs[k][0], big, half, k ? 0 : 0.25 / scale, info.yaw), k * big, top); g.fillStyle = '#fff'; g.font = '12px Arial'; g.fillText(dirs[k][1], k * big + 5, top + 14); }
+    for (let s = 0; s < model.states.length; s++) {
+        const st = model.states[s], y = top + big + s * (small + label);
+        const posed = { ...model, parts: model.parts.map((p) => ({ ...p, track: (p.states && p.states[st.name]) || null })) };
+        g.fillStyle = '#000'; g.font = 'bold 13px Arial';
+        g.fillText(st.name + ' — ' + st.length + ' ticks' + (st.once ? ' (une fois)' : ' (boucle)') + ' — ' + st.moving + ' pièces en mouvement, ' + st.keys + ' images clés = ' + (st.keys * 20 / st.length).toFixed(1) + ' paquets/s', 6, y + 14);
+        for (let k = 0; k < 8; k++) {
+            const tick = Math.round(k * st.length / 8);
+            g.drawImage(await view(posed, tick, info.side ? [1, 0.15, 0.25] : [0.75, 0.45, 1], small, half * 1.25, 0, info.yaw), k * small, y + label);
+            g.fillStyle = '#fff'; g.font = '12px Arial'; g.fillText('t=' + tick, k * small + 4, y + label + 13);
+        }
+    }
+    return canvas.toDataURL('image/png');
+};
 document.title = 'pret';
 </script>`;
     const file = join(outDir, 'rendu.html');
@@ -216,7 +241,10 @@ document.title = 'pret';
     try {
         await b.goto(pathToFileURL(file).href, 500);
         for (let i = 0; i < 40 && (await b.js('document.title')) !== 'pret'; i++) await sleep(250);
-        if (sheet) {
+        if (sheet === 'etats') for (const name of Object.keys(models)) {
+            const url = await b.js(`states(${JSON.stringify(name)})`);
+            writeFileSync(join(outDir, name + '.png'), Buffer.from(url.split(',')[1], 'base64'));
+        } else if (sheet) {
             const url = await b.js(`${sheet.startsWith('anim') ? 'anim' : sheet.startsWith('indices') ? 'indices' : 'sheet'}(${JSON.stringify(Object.keys(models))})`);
             writeFileSync(join(outDir, sheet + '.png'), Buffer.from(url.split(',')[1], 'base64'));
         } else for (const name of Object.keys(models)) {

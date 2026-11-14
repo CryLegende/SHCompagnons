@@ -91,6 +91,22 @@
 #   Un modèle qui fait déjà son saut dans ses poses (les slimes fournis) se déclare avec « animation: NONE ».
 #   Coût : un paquet par entité animée à chacune de ses poses, pour chaque joueur qui voit le compagnon ; une entité
 #   qui ne change pas dans une animation ne coûte rien. /shcompagnons models donne le nombre d'entités animées.
+#
+# ----------------------------------------------------------------------------------------------------------------
+# Modèles faits dans Blockbench
+# ----------------------------------------------------------------------------------------------------------------
+#   Un modèle dessiné et animé dans Blockbench (format « Generic Model ») se convertit avec l'atelier du plugin
+#   (atelier/blockbench.mjs) : chaque cube devient une tête de joueur étirée qui porte les six faces du cube, sans
+#   resource pack. Ses animations deviennent des états, joués selon ce que fait le compagnon :
+#     idle       au repos, en boucle
+#     walk       quand le compagnon avance (avec son propriétaire, ou de lui-même en mode GROUND), en boucle
+#     interact   quand son propriétaire clique sur lui, une fois ; remplace le saut
+#   Dans le fichier de modèle, ils suivent la pose de base :
+#     @state walk length=12            un état de 12 ticks (« once » à la fin de la ligne : joué une seule fois)
+#     @track 3 0:<10 nombres> 6:...    images clés de la pièce n° 3 : tick, puis translation, rotation, échelle
+#   D'un état à l'autre, chaque pièce rejoint sa nouvelle pose en 3 ticks. Un compagnon à états se déclare avec
+#   « animation: NONE » (ou FLOAT s'il est porté), et « follow: GROUND » pour qu'il marche au sol.
+#   Coût : un paquet par pièce à chacune de ses images clés dans l'état joué ; l'atelier l'affiche par état.
 #   Une transformation écrite en translation, left_rotation, scale, right_rotation s'anime mieux qu'une transformation
 #   en 16 nombres : le client anime ces quatre valeurs séparément.
 #
@@ -138,7 +154,15 @@ companion_settings:
 
   # ATTACHED : passager du joueur, le client le déplace avec lui à chaque image (aucun paquet de position).
   # FREE : flotte et rattrape le joueur avec un temps de retard (un paquet de position par mise à jour).
+  # GROUND : marche au sol derrière le joueur, s'arrête près de lui et le rejoint quand il s'éloigne (un paquet de
+  #          position par mise à jour tant qu'il marche, rien à l'arrêt). Le modèle est posé sur ses pieds.
   follow: ATTACHED
+
+  # Mode GROUND
+  ground_follow:
+    # Distance au joueur (blocs) à laquelle le compagnon s'arrête ; il repart quand le joueur s'éloigne d'un
+    # demi-bloc de plus. update_ticks, catch_up et teleport_distance de free_follow valent aussi pour ce mode.
+    distance: 1.6
 
   # Mode FREE
   free_follow:
@@ -230,7 +254,7 @@ companion_settings:
 #                         SPIN (tour sur lui-même)
 #   animation_speed       vitesse de l'animation (1 = normale, 2 = deux fois plus rapide)
 #   animation_amplitude   ampleur des mouvements de l'animation (1 = normale)
-#   follow                ATTACHED ou FREE (voir companion_settings)
+#   follow                ATTACHED, FREE ou GROUND (voir companion_settings)
 #   placement             offset, rotation, scale (voir companion_settings), seules les clés données changent
 #   click                 sound, pitch : son du compagnon quand son propriétaire clique dessus (voir
 #                         companion_settings.click) ; sound vide : aucun son
@@ -262,6 +286,17 @@ pets:
       pitch: 1.0
     placement:
       scale: 0.6
+  # Modèle fait dans Blockbench : il marche au sol, avec ses états idle, walk et interact
+  Capybara:
+    displayname: "Capybara"
+    animation: NONE
+    model: capybara
+    follow: GROUND
+    click:
+      sound: entity.item.pickup
+      pitch: 0.8
+    placement:
+      scale: 0.46
   # Compagnons d'évènement, hors box cosmétique : leur modèle porte le nom de l'évènement (halloween_, paques_, ete_)
   Araignee:
     displayname: "Araignée"

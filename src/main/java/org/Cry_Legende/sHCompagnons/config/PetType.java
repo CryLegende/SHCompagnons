@@ -1,5 +1,6 @@
 package org.Cry_Legende.sHCompagnons.config;
 
+import org.Cry_Legende.sHCompagnons.model.ModelLibrary;
 import org.Cry_Legende.sHCompagnons.model.Part;
 import org.Cry_Legende.sHCompagnons.pet.Animation;
 import org.joml.Quaternionfc;
@@ -24,8 +25,19 @@ public record PetType(
     FollowMode follow,
     float radius,
     String clickSound,
-    float clickPitch
+    float clickPitch,
+    List<ModelLibrary.State> states
 ) {
+
+    /** Numéro de l'état de ce nom dans le modèle, -1 s'il n'en a pas. */
+    public int state(String name) {
+        for (int i = 0; i < states.size(); i++) {
+            if (states.get(i).name().equals(name)) {
+                return i;
+            }
+        }
+        return -1;
+    }
 
     /** Position du modèle autour du joueur : décalage, rotation et échelle uniforme. */
     public record Placement(Vector3fc offset, Quaternionfc rotation, float scale) {
@@ -35,5 +47,8 @@ public record PetType(
         /** Passager du joueur : le client le déplace avec lui, aucun paquet de position. */
         ATTACHED,
         /** Flotte derrière le joueur et le rattrape avec un temps de retard. */
-        FREE
-    }}
+        FREE,
+        /** Marche au sol derrière le joueur : s'arrête près de lui, le rejoint quand il s'éloigne. */
+        GROUND
+    }
+}
