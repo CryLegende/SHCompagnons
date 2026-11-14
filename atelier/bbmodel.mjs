@@ -74,7 +74,8 @@ function tree(bb, warn) {
         if (typeof node === 'string') {
             const e = elements[node];
             if (!e || (e.type && e.type !== 'cube')) { if (e) warn('élément « ' + e.name + ' » de type ' + e.type + ' ignoré (seuls les cubes sont repris)'); return; }
-            if (e.visibility === false || e.export === false) return;
+            // Un cube nommé « hitbox » est la boîte de collision des modèles ModelEngine, pas une pièce à afficher
+            if (e.visibility === false || e.export === false || /^hitbox$/i.test(e.name || '')) return;
             const special = /^(bloc|objet):([a-z0-9_]+)([/]|$)/.exec(e.name || '');
             cubes.push({ name: e.name, kind: special ? special[1] : 'tete', what: special ? special[2] : null, parent, from: e.from, to: e.to, origin: e.origin || [0, 0, 0], rotation: e.rotation || [0, 0, 0], inflate: e.inflate || 0, faces: e.faces || {} });
             return;
