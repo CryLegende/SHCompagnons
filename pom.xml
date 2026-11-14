@@ -6,7 +6,7 @@
 
     <groupId>org.Cry_Legende</groupId>
     <artifactId>SHCompagnons</artifactId>
-    <version>2.7-essai</version>
+    <version>2.7</version>
     <packaging>jar</packaging>
 
     <name>SHCompagnons</name>
