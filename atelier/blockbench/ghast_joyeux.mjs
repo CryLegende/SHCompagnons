@@ -1,10 +1,11 @@
-// Happy Ghast : grand sourire, lunettes d'aviateur sur le front, harnais brun et coussin bleu sur le dos.
+// Happy Ghast : celui du jeu. Son sourire (le visage du compagnon d'origine), lunettes relevées sur le front,
+// harnais brun et coussin bleu sur le dos.
 import { ghast } from './_ghast.mjs';
 
 export default ghast({
     name: 'ghast_joyeux', title: 'Happy Ghast',
-    palette: { B: '#8a5a3a', c: '#7fd4e8', C: '#56b3cc', e: { c: '#f4fdff' } },
-    face: ['wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'wkwwwwkw', 'wkwwwwkw', 'bbwwwwbb', 'wwGwwGww', 'wwwGGwww'],
+    palette: { B: '#8a5a3a', c: '#7fd4e8', C: '#56b3cc', e: { c: '#f4fdff' }, k: { c: '#5c5c62' }, m: { c: '#9a9aa0' }, p: '#f3d3d6', q: '#e6dcdc' },
+    face: ['wwwwwwww', 'wwwwwwww', 'wqwwwwqw', 'wkkwwkkw', 'pwwwwwwp', 'qpmwwmpq', 'wqwkkwqw', 'wwwwwwww'],
     plus: {
         bones: {},
         cubes: [

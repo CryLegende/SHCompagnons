@@ -1,4 +1,5 @@
-// Panda : peluche blanche aux bras, jambes, oreilles et yeux noirs, une tige de bambou à la main. Au clic il la grignote.
+// Panda : le gourmand. Il serre sa tige de bambou, une feuille oubliée sur la tête, des miettes vertes au coin du
+// museau. Au clic il part en roulade arrière et se rassoit, tout étonné.
 import { peluche } from './_peluche.mjs';
 
 const tache = ['wwwwwwww', 'wdewwedw', 'wddwwddw', 'bbwwwwbb', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww'];
@@ -6,22 +7,29 @@ const tache = ['wwwwwwww', 'wdewwedw', 'wddwwddw', 'bbwwwwbb', 'wwwwwwww', 'wwww
 export default peluche({
     name: 'panda',
     title: 'Panda',
-    palette: { w: '#f8f5ee', d: '#40394a', e: { c: '#ffffff' }, n: { c: '#2b1b12' }, m: { c: '#bdb4aa' }, g: '#7cc54a', G: '#4f9a31', p: '#6a6270' },
+    palette: { w: '#f8f5ee', d: '#40394a', e: { c: '#ffffff' }, n: { c: '#2b1b12' }, m: { c: '#bdb4aa' }, g: '#7cc54a', G: '#4f9a31', p: '#6a6270', v: { c: '#7cc54a' } },
     lettres: { corps: 'w', bras: 'd', oreille: 'd', museau: 'w' },
     dessins: {
         ventre: ['dddddddd', 'dddddddd', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww'],
         flanc: ['dddddddd', 'dddddddd', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww'],
         visage: tache,
-        museau: ['wwwnnwww', 'wwwnnwww', 'wwwwwwww', 'wwmwwmww', 'wwwmmwww', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww'],
+        museau: ['wwwnnwww', 'wwwnnwww', 'wwwwwwww', 'wwmwwmvw', 'wwwmmwvw', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww'],
         coussinet: ['dddd', 'dppd', 'dppd', 'dddd'],
         creux: 'd',
     },
-    plus: { bones: {}, cubes: [{ name: 'bambou', bone: 'brasD', bord: false, from: [3.2, 2.2, -2.9], to: [4.1, 10.2, -2], rot: [0, 0, -8], pivot: [3.6, 4, -2.4], faces: { all: ['gg', 'gg', 'GG', 'gg', 'gg', 'GG', 'gg', 'gg'], up: 'G' } }] },
+    plus: {
+        bones: { feuille: { parent: 'tete', pivot: [-1, 12.4, -1] } },
+        cubes: [
+            { name: 'bambou', bone: 'brasD', bord: false, from: [3.2, 2.2, -2.9], to: [4.1, 10.2, -2], rot: [0, 0, -8], pivot: [3.6, 4, -2.4], faces: { all: ['gg', 'gg', 'GG', 'gg', 'gg', 'GG', 'gg', 'gg'], up: 'G' } },
+            { name: 'feuille', bone: 'feuille', bord: false, from: [-2.4, 12.4, -1.8], to: [0.4, 12.9, -0.2], rot: [0, 24, 10], pivot: [-1, 12.4, -1], faces: { all: 'G', up: ['gGgg', 'ggGg'] } },
+        ],
+    },
     interact: {
         length: 1.8, loop: false,
         bones: {
-            brasD: { rotation: [[0, [0, 0, 0]], [0.3, [-38, 0, -26]], [0.5, [-30, 0, -26]], [0.7, [-38, 0, -26]], [0.9, [-30, 0, -26]], [1.1, [-38, 0, -26]], [1.3, [-30, 0, -26]], [1.7, [0, 0, 0]]] },
-            tete: { rotation: [[0, [0, 0, 0]], [0.3, [-6, -10, 0]], [0.5, [-2, -10, 0]], [0.7, [-6, -10, 0]], [0.9, [-2, -10, 0]], [1.1, [-6, -10, 0]], [1.3, [-2, -10, 0]], [1.7, [0, 0, 0]]] },
+            root: { rotation: [[0, [0, 0, 0]], [0.2, [-14, 0, 0]], [0.5, [120, 0, 0]], [0.8, [240, 0, 0]], [1.1, [360, 0, 0]]], position: [[0, [0, 0, 0]], [0.5, [0, 1.5, 2]], [0.8, [0, 1.5, 3]], [1.1, [0, 0, 0]], [1.8, [0, 0, 0]]] },
+            tete: { rotation: [[1.1, [0, 0, 0]], [1.25, [0, 0, 12]], [1.45, [0, 0, -12]], [1.65, [0, 0, 0]]] },
+            feuille: { position: [[0.2, [0, 0, 0]], [0.6, [-1.5, 3.4, 0]], [1.3, [-0.5, 1.2, 0]], [1.6, [0, 0, 0]]], rotation: [[0.2, [0, 0, 0]], [0.9, [0, 180, 0]], [1.6, [0, 360, 0]]] },
         },
     },
 });

@@ -285,7 +285,7 @@ pets:
     click:
       sound: entity.slime.squish_small
       pitch: 1.0
-  # Tous les modèles fournis sont faits dans Blockbench : ils flottent à l'épaule, avec leurs états idle, walk et interact
+  # Les modèles faits dans Blockbench (tous sauf Steve, Alex, Zombie, R2-D2 et Golem de cuivre) flottent à l'épaule, avec leurs états idle, walk et interact
     placement:
       scale: 0.39
   Capybara:

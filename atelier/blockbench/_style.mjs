@@ -27,6 +27,9 @@ export function visage(fond, { ligne = 1, yeux = [1, 6], joues = true, oeil = 'k
     return out;
 }
 
+/** Visage plat des références : yeux rapprochés (colonnes 2 et 5), au milieu de la face. Pour un objet, un oiseau, une créature sans museau. */
+export const frimousse = (fond, options = {}) => visage(fond, { ligne: 3, yeux: [2, 5], ...options });
+
 const round = (t) => Math.round(t * 20) / 20;
 /** Réunit des animations d'os ({ os: { rotation, position, scale } }) en une seule. */
 export function mix(...parts) {
@@ -63,6 +66,19 @@ export function regarde(os = 'tete', duree = IDLE, angle = 9, penche = 2) {
 export function tic(os, v, debut) {
     const z = [0, 0, 0];
     return { [os]: { rotation: [[round(debut), z], [round(debut + 0.1), v], [round(debut + 0.2), z], [round(debut + 0.3), v.map((x) => x * 0.8)], [round(debut + 0.4), z]] } };
+}
+/**
+ * Petit cube qui flotte en boucle (vapeur, bulle, « z », larme) : il part de sa place, monte (ou descend) de « h »
+ * pixels en rapetissant, disparaît, puis renaît à sa place. depart (0 à 1) décale le cycle pour que plusieurs
+ * cubes ne bougent pas ensemble ; derive : déplacement de côté pendant la montée.
+ */
+export function flotte(os, h, duree, depart = 0, derive = 0) {
+    const points = [[0, [0, 0, 0], 1], [0.65, [derive, h, 0], 0.4], [0.75, [derive * 1.1, h * 1.1, 0], 0.05], [0.8, [0, 0, 0], 0.05], [1, [0, 0, 0], 1]];
+    const at = (u) => { const i = Math.max(1, points.findIndex((p) => p[0] >= u)); const [a, b] = [points[i - 1], points[i]]; const k = (u - a[0]) / (b[0] - a[0]); return [a[1].map((v, n) => v + (b[1][n] - v) * k), a[2] + (b[2] - a[2]) * k]; };
+    const times = [...new Set([0, 1, ...points.map((p) => (p[0] + depart) % 1)])].sort((x, y) => x - y);
+    const position = [], scale = [];
+    for (const t of times) { const [pos, k] = at(((t - depart) % 1 + 1) % 1 || (t === 1 && depart === 0 ? 1 : 0)); position.push([round(t * duree), pos]); scale.push([round(t * duree), [k, k, k]]); }
+    return { [os]: { position, scale } };
 }
 /** Pattes qui pendent et se balancent doucement, en alternance (le compagnon flotte : elles ne restent pas figées). */
 export function pendouille(pattes = QUATRE, angle = 7, duree = IDLE, tours = 2) {

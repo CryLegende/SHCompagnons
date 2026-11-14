@@ -65,6 +65,10 @@ export function project(def) {
         }
         const chars = expand(face, 'cube ' + cube.name + ', face ' + name);
         const edge = cube.bord !== undefined ? cube.bord : def.bord !== false;
+        // Cube uni (les six faces de la même couleur) : même grain que les autres cubes unis de cette couleur, donc
+        // même tête en jeu quand ils ont aussi le même bord
+        const plain = FACES.map((f) => (cube.faces[f] === undefined ? cube.faces.all : cube.faces[f]));
+        const seed = cube.seed || (plain.every((f) => typeof f === 'string' && [...f].length === 1 && f === plain[0]) ? 'uni:' + plain[0] : cube.name);
         const px = new Uint8Array(8 * 8 * 4);
         for (let i = 0; i < 64; i++) {
             const entry = def.palette[chars[i]];
@@ -74,7 +78,7 @@ export function project(def) {
             const light = !flat && edge && edge !== 'bas' && (name === 'up' || (name !== 'down' && y === 0));
             const dark = !flat && edge && edge !== 'haut' && (name === 'down' || (name !== 'up' && y === 7));
             const shade = flat ? 0 : name === 'up' ? grad * 0.4 : name === 'down' ? -grad : grad * (0.5 - y / 7);
-            const k = 1 + shade + (flat ? 0 : noise) * (rand(hash32(def.name + '/' + (cube.seed || cube.name) + '/' + name + '/' + i + chars[i])) * 2 - 1);
+            const k = 1 + shade + (flat ? 0 : noise) * (rand(hash32(def.name + '/' + seed + '/' + name + '/' + i + chars[i])) * 2 - 1);
             for (let c = 0; c < 3; c++) {
                 const v = light ? color[c] + (255 - color[c]) * CLAIR : dark ? color[c] * SOMBRE : color[c];
                 px[i * 4 + c] = Math.max(0, Math.min(255, Math.round(v * k)));
