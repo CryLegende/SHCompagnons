@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url';
 /**
  * models : JSON de Vide.java ; images : { 'head:<empreinte>' | bloc : dataURL } ; info : { nom: { scale, frames, title } }.
  */
-export async function render(models, images, info, outDir, sheet) {
+export async function render(models, images, info, outDir, sheet, tag = '') {
     const page = `<!doctype html><meta charset="utf-8"><title>rendu</title><body style="margin:0;background:#fff">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -132,13 +132,13 @@ async function view(model, tick, dir, size, half, ref, yaw) {
     return c;
 }
 // Planche : deux vues par modèle (3/4 avant, face) à la même échelle de jeu, quatre modèles par ligne
-window.sheet = async (names) => {
-    const cell = 400, v = 200, top = 20;
-    const canvas = document.createElement('canvas'); canvas.width = 1600; canvas.height = Math.ceil(names.length / 4) * (v + top);
+window.sheet = async (names, v = 200) => {
+    const cell = 2 * v, top = 20, per = 1600 / cell;
+    const canvas = document.createElement('canvas'); canvas.width = 1600; canvas.height = Math.ceil(names.length / per) * (v + top);
     const g = canvas.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, canvas.width, canvas.height);
     for (let i = 0; i < names.length; i++) {
         const model = MODELS[names[i]], info = INFO[names[i]] || {}, scale = info.scale || 0.5;
-        const x = (i % 4) * cell, y = Math.floor(i / 4) * (v + top);
+        const x = (i % per) * cell, y = Math.floor(i / per) * (v + top);
         // même échelle de jeu pour tous : la vue couvre 0,62 bloc
         const half = 0.31 / scale;
         g.drawImage(await view(model, 0, [0.75, 0.5, 1], v, half, 0, info.yaw), x, y + top);
@@ -235,7 +235,7 @@ window.states = async (name) => {
 };
 document.title = 'pret';
 </script>`;
-    const file = join(outDir, 'rendu.html');
+    const file = join(outDir, 'rendu' + (tag ? '-' + tag : '') + '.html');
     writeFileSync(file, page);
     const b = await open();
     try {
@@ -245,7 +245,7 @@ document.title = 'pret';
             const url = await b.js(`states(${JSON.stringify(name)})`);
             writeFileSync(join(outDir, name + '.png'), Buffer.from(url.split(',')[1], 'base64'));
         } else if (sheet) {
-            const url = await b.js(`${sheet.startsWith('anim') ? 'anim' : sheet.startsWith('indices') ? 'indices' : 'sheet'}(${JSON.stringify(Object.keys(models))})`);
+            const url = await b.js(`${sheet.startsWith('anim') ? 'anim' : sheet.startsWith('indices') ? 'indices' : 'sheet'}(${JSON.stringify(Object.keys(models))}${sheet.startsWith('gros') ? ', 400' : ''})`);
             writeFileSync(join(outDir, sheet + '.png'), Buffer.from(url.split(',')[1], 'base64'));
         } else for (const name of Object.keys(models)) {
             const url = await b.js(`draw(${JSON.stringify(name)})`);

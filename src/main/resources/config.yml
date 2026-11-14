@@ -105,7 +105,8 @@
 #     @state walk length=12            un état de 12 ticks (« once » à la fin de la ligne : joué une seule fois)
 #     @track 3 0:<10 nombres> 6:...    images clés de la pièce n° 3 : tick, puis translation, rotation, échelle
 #   D'un état à l'autre, chaque pièce rejoint sa nouvelle pose en 3 ticks. Un compagnon à états se déclare avec
-#   « animation: NONE » (ou FLOAT s'il est porté), et « follow: GROUND » pour qu'il marche au sol.
+#   « animation: FLOAT » (il flotte à l'épaule ; le flottement s'arrête de lui-même pendant qu'il avance), ou avec
+#   « animation: NONE » et « follow: GROUND » pour qu'il marche au sol.
 #   Coût : un paquet par pièce à chacune de ses images clés dans l'état joué ; l'atelier l'affiche par état.
 #   Une transformation écrite en translation, left_rotation, scale, right_rotation s'anime mieux qu'une transformation
 #   en 16 nombres : le client anime ces quatre valeurs séparément.
@@ -276,28 +277,27 @@ pets:
       sound: entity.ghast.ambient
       pitch: 1.8
     placement:
-      scale: 0.5
+      scale: 0.39
   Slime:
     displayname: "Slime"
-    animation: NONE
+    animation: FLOAT
     model: slime
     click:
       sound: entity.slime.squish_small
       pitch: 1.0
+  # Tous les modèles fournis sont faits dans Blockbench : ils flottent à l'épaule, avec leurs états idle, walk et interact
     placement:
-      scale: 0.6
-  # Modèle fait dans Blockbench : il marche au sol, avec ses états idle, walk et interact
+      scale: 0.39
   Capybara:
     displayname: "Capybara"
-    animation: NONE
+    animation: FLOAT
     model: capybara
-    follow: GROUND
     click:
       sound: entity.item.pickup
       pitch: 0.8
-    placement:
-      scale: 0.46
   # Compagnons d'évènement, hors box cosmétique : leur modèle porte le nom de l'évènement (halloween_, paques_, ete_)
+    placement:
+      scale: 0.37
   Araignee:
     displayname: "Araignée"
     animation: FLOAT
@@ -306,6 +306,4 @@ pets:
       sound: entity.spider.ambient
       pitch: 1.5
     placement:
-      rotation:
-        y: 170
-      scale: 0.36
+      scale: 0.45

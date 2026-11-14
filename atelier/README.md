@@ -65,12 +65,17 @@ Un modèle réservé à un évènement porte son nom en préfixe (`halloween_ara
 
 ## Modèles faits dans Blockbench
 
+Tous les compagnons fournis sont faits ainsi depuis la version 2.7. Le style commun (silhouette, visage, couleurs, animations) est décrit dans `blockbench/STYLE.md`, montré dans `blockbench/STYLE.png` et `blockbench/famille.png` ; `blockbench/_style.mjs` en porte les briques (visage, pattes, animations types).
+
 Un modèle dessiné et animé dans Blockbench (format « Generic Model », « Per-face UV ») devient un compagnon sans resource pack : chaque cube est rendu par une tête de joueur étirée qui porte ses six faces, chaque animation devient un état (`idle` au repos, `walk` quand il avance, `interact` au clic de son propriétaire).
 
 ```text
 node blockbench.mjs capybara                    blockbench/capybara.bbmodel → sortie/capybara.txt, peaux, sortie/capybara.png
 node blockbench.mjs --garder capybara           même chose sans réécrire le projet depuis sa description (projet retouché à la main)
 node blockbench.mjs chemin/vers/modele.bbmodel  un projet venu d'ailleurs
+node blockbench.mjs --planche=gros capybara lapin  deux vues par modèle, en grand, à la même échelle de jeu
+node blockbench.mjs --livrer tout               copie les modèles dans le plugin, écrit sortie/echelles.json
+node planche-style.mjs                          refait STYLE.png et famille.png
 MINESKIN_KEY=<clé> node televerse.mjs           envoie les têtes, puis relancer blockbench.mjs
 ```
 

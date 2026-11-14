@@ -82,14 +82,14 @@ public class Vide {
                 int stateKeys = 0, moving = 0;
                 for (int i = 0; i < base.size(); i++) {
                     if (own[i] == null) continue;
-                    moving++;
+                    if (own[i].keys() > 1) moving++;
                     StringBuilder t = new StringBuilder("\"" + state.name() + "\":{\"loop\":" + state.length() + ",\"keys\":[");
                     int tick = 0;
                     for (int k = 0; k < own[i].keys(); k++) {
                         if (k > 0) t.append(',');
                         t.append("{\"tick\":").append(tick).append(',').append(affine(own[i].at(tick))).append('}');
                         tick = own[i].nextTick(tick);
-                        stateKeys++;
+                        if (own[i].keys() > 1) stateKeys++;
                     }
                     byState[i] = (byState[i] == null ? "" : byState[i] + ",") + t.append("]}");
                 }

@@ -1035,13 +1035,16 @@ public final class Pet {
      * aux pièces animées du modèle. Le client fait chaque trajet seul, de ce qu'il affiche à la cible, en « durée » ticks.
      */
     private void animate(int now) {
-        boolean moves = scriptKey >= 0 || type.animation().moves();
+        // Un modèle à états ne flotte plus pendant qu'il avance : on ne le verrait pas, et chaque image du flottement
+        // coûte un paquet par pièce. Le flottement reprend où il en était dès qu'il s'arrête.
+        boolean floats = type.animation().moves() && (state < 0 || state != walkState);
+        boolean moves = scriptKey >= 0 || floats;
         boolean whole = moves && now >= nextKeyframeTick;
         boolean turns = false;
         if (whole && scriptKey >= script.length) {
             // Images clés imposées terminées : l'animation du compagnon reprend où elle en était
             scriptKey = -1;
-            moves = type.animation().moves();
+            moves = floats;
             whole = moves;
         }
         if (whole && scriptKey >= 0) {
@@ -1098,19 +1101,30 @@ public final class Pet {
             int until = moves ? nextKeyframeTick : Integer.MAX_VALUE;
             Affine pose = poses[i];
             boolean due = false;
+            // held : pièce qui garde une seule pose pendant tout l'état (corps penché en avant quand le compagnon
+            // avance...) : elle la rejoint une fois, puis n'a plus d'image clé à elle
+            int held = -1;
             if (track != null) {
                 due = now >= poseDue[i];
                 if (due) {
                     int local = Math.floorMod(now - partsEpoch, track.loop());
-                    poseDue[i] = now + track.nextTick(local) - local;
+                    if (track.keys() == 1) {
+                        poseDue[i] = Integer.MAX_VALUE;
+                        held = now + BLEND_TICKS;
+                    } else {
+                        poseDue[i] = now + track.nextTick(local) - local;
+                    }
                 }
                 nextPart = Math.min(nextPart, poseDue[i]);
-                until = Math.min(until, poseDue[i]);
+                until = Math.min(until, held >= 0 ? held : poseDue[i]);
                 if (whole || due) {
                     pose = track.at(Math.floorMod(until - partsEpoch, track.loop()));
                 }
             }
             if (!whole && !due && look == null) {
+                continue;
+            }
+            if (held >= 0 && !whole && look == null && pose.equals(poses[i])) {
                 continue;
             }
             if (until == Integer.MAX_VALUE) {

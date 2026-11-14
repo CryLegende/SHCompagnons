@@ -8,6 +8,8 @@
 //
 // Une face de tête montre 8 x 8 pixels : une face de cube dessinée sur 1, 2, 4 ou 8 pixels de large ou de haut est
 // reprise à l'identique, les autres largeurs sont rééchantillonnées au plus proche.
+// Un cube nommé « bloc:<bloc>/<nom> » est rendu par ce bloc du jeu (verre teinté d'un slime...), un cube nommé
+// « objet:<objet>/<nom> » par cet objet tenu à plat (une pioche) : sa texture Blockbench ne sert alors qu'à l'aperçu.
 import { createHash } from 'node:crypto';
 import { decodePng, encodePng } from './png.mjs';
 
@@ -73,7 +75,8 @@ function tree(bb, warn) {
             const e = elements[node];
             if (!e || (e.type && e.type !== 'cube')) { if (e) warn('élément « ' + e.name + ' » de type ' + e.type + ' ignoré (seuls les cubes sont repris)'); return; }
             if (e.visibility === false || e.export === false) return;
-            cubes.push({ name: e.name, parent, from: e.from, to: e.to, origin: e.origin || [0, 0, 0], rotation: e.rotation || [0, 0, 0], inflate: e.inflate || 0, faces: e.faces || {} });
+            const special = /^(bloc|objet):([a-z0-9_]+)([/]|$)/.exec(e.name || '');
+            cubes.push({ name: e.name, kind: special ? special[1] : 'tete', what: special ? special[2] : null, parent, from: e.from, to: e.to, origin: e.origin || [0, 0, 0], rotation: e.rotation || [0, 0, 0], inflate: e.inflate || 0, faces: e.faces || {} });
             return;
         }
         const g = { ...node, ...(groupData[node.uuid] || {}) };
@@ -193,23 +196,29 @@ function pose(model, anim, time, warn) {
     });
 }
 
-/** Transformation de l'entité d'affichage d'une tête : translation (blocs), rotation gauche, échelle. */
-function entity(p) {
+/**
+ * Transformation de l'entité d'affichage d'une pièce : translation (blocs), rotation gauche, échelle. Une tête est
+ * centrée de côté et pendue sous son origine ; un bloc part de son coin ; un objet est une image plate centrée.
+ */
+function entity(p, kind = 'tete') {
+    if (kind === 'bloc') { const s = p.size.map((v) => v / 16); return { t: sub(p.c.map((v) => v / 16), qRot(p.q, s.map((v) => v / 2))), l: p.q, s, box: [[0, 1], [0, 1], [0, 1]] }; }
+    if (kind === 'objet') { const k = Math.max(...p.size) / 16; return { t: p.c.map((v) => v / 16), l: qMul(p.q, [0, 1, 0, 0]), s: [k, k, k], box: [[-0.5, 0.5], [-0.5, 0.5], [-0.03, 0.03]] }; }
     const scale = p.size.map((v) => v / 8);
     const t = add(p.c.map((v) => v / 16), qRot(p.q, [0, scale[1] / 4, 0]));
-    return { t, l: qMul(p.q, [0, 1, 0, 0]), s: scale };
+    return { t, l: qMul(p.q, [0, 1, 0, 0]), s: scale, box: [[-0.25, 0.25], [-0.5, 0], [-0.25, 0.25]] };
 }
-/** Écart le plus grand entre les coins de la tête pour deux transformations (blocs). */
+/** Écart le plus grand entre les coins de la pièce pour deux transformations (blocs). */
 function gap(a, b) {
     let worst = 0;
-    for (const x of [-0.25, 0.25]) for (const y of [-0.5, 0]) for (const z of [-0.25, 0.25]) {
+    const box = a.box || [[-0.25, 0.25], [-0.5, 0], [-0.25, 0.25]];
+    for (const x of box[0]) for (const y of box[1]) for (const z of box[2]) {
         const pa = add(a.t, qRot(a.l, [x * a.s[0], y * a.s[1], z * a.s[2]])), pb = add(b.t, qRot(b.l, [x * b.s[0], y * b.s[1], z * b.s[2]]));
         worst = Math.max(worst, norm(sub(pa, pb)));
     }
     return worst;
 }
 /** Ce que le client affiche entre deux images clés : translation et échelle en ligne droite, rotation au plus court. */
-const between = (a, b, k) => ({ t: a.t.map((v, i) => v + (b.t[i] - v) * k), l: qSlerp(a.l, b.l, k), s: a.s.map((v, i) => v + (b.s[i] - v) * k) });
+const between = (a, b, k) => ({ t: a.t.map((v, i) => v + (b.t[i] - v) * k), l: qSlerp(a.l, b.l, k), s: a.s.map((v, i) => v + (b.s[i] - v) * k), box: a.box });
 
 /**
  * Images clés gardées pour une pièce : ticks (le premier à 0) tels que le trajet du client entre deux images gardées
@@ -302,6 +311,7 @@ export function convert(bb, textures = {}, options = {}) {
 
     const skins = {};
     const values = model.cubes.map((cube) => {
+        if (cube.kind !== 'tete') return null;
         const px = skinOf(cube, images, resolution, warn);
         const sha = createHash('sha1').update(px).digest('hex').slice(0, 20);
         skins[sha] = encodePng(64, 64, px);
@@ -309,8 +319,14 @@ export function convert(bb, textures = {}, options = {}) {
         return Buffer.from('{"textures":{"SKIN":{"url":"http://textures.minecraft.net/texture/' + hash + '"}}}').toString('base64');
     });
 
-    const base = pose(model, null, 0, warn).map(entity);
-    const head = (e, i) => '{id:"minecraft:item_display",item:{id:"minecraft:player_head",count:1,components:{"minecraft:profile":{properties:[{name:"textures",value:"' + values[i] + '"}]}}},item_display:"none",transformation:{left_rotation:[' + e.l.map((v) => f(v, 5)).join(',') + '],right_rotation:[0f,0f,0f,1f],translation:[' + e.t.map((v) => f(v)).join(',') + '],scale:[' + e.s.map((v) => f(v)).join(',') + ']}}';
+    const kinds = model.cubes.map((c) => c.kind);
+    const base = pose(model, null, 0, warn).map((p, i) => entity(p, kinds[i]));
+    const head = (e, i) => {
+        const transformation = 'transformation:{left_rotation:[' + e.l.map((v) => f(v, 5)).join(',') + '],right_rotation:[0f,0f,0f,1f],translation:[' + e.t.map((v) => f(v)).join(',') + '],scale:[' + e.s.map((v) => f(v)).join(',') + ']}';
+        if (kinds[i] === 'bloc') return '{id:"minecraft:block_display",block_state:{Name:"minecraft:' + model.cubes[i].what + '"},' + transformation + '}';
+        if (kinds[i] === 'objet') return '{id:"minecraft:item_display",item:{id:"minecraft:' + model.cubes[i].what + '",count:1},item_display:"none",' + transformation + '}';
+        return '{id:"minecraft:item_display",item:{id:"minecraft:player_head",count:1,components:{"minecraft:profile":{properties:[{name:"textures",value:"' + values[i] + '"}]}}},item_display:"none",' + transformation + '}';
+    };
     const lines = ['# ' + (options.title || bb.name || options.name || 'modèle') + ' — modèle SkyHand fait dans Blockbench (' + model.cubes.length + ' cubes)',
         '/summon block_display ~ ~ ~ {Passengers:[' + base.map(head).join(',') + ']}'];
 
@@ -320,19 +336,22 @@ export function convert(bb, textures = {}, options = {}) {
         const ticks = Math.max(1, Math.round(anim.length * 20));
         // Pose de chaque pièce à chaque tick ; la dernière est celle du bouclage (retour au tick 0)
         const frames = model.cubes.map(() => []);
-        for (let t = 0; t <= ticks; t++) pose(model, anim, t === ticks ? 0 : t / 20, warn).forEach((p, i) => frames[i].push(entity(p)));
+        for (let t = 0; t <= ticks; t++) pose(model, anim, t === ticks ? 0 : t / 20, warn).forEach((p, i) => frames[i].push(entity(p, kinds[i])));
         lines.push('@state ' + anim.name + ' length=' + ticks + (anim.loop ? '' : ' once'));
         let keys = 0, moving = 0;
         frames.forEach((list, i) => {
             const kept = reduce(list, tolerance);
             // Pièce immobile dans cet état et à sa pose de base : rien à écrire
             if (kept.length === 1 && gap(list[0], base[i]) <= 1e-5) return;
-            moving++; keys += kept.length;
+            // Une pièce qui tient une seule pose pendant l'état la rejoint une fois : elle ne coûte rien ensuite
+            if (kept.length > 1) { moving++; keys += kept.length; }
             lines.push('@track ' + i + ' ' + kept.map((t) => t + ':' + [...list[t].t, ...list[t].l, ...list[t].s].map((v) => n(v)).join(',')).join(' '));
         });
         states.push({ name: anim.name, ticks, once: !anim.loop, keys, moving, perSecond: keys * 20 / ticks });
     }
-    return { text: lines.join('\n') + '\n', skins, parts: model.cubes.length, names: model.cubes.map((c) => c.name), states, warnings };
+    // « Corps » du modèle : côté (blocs, à l'échelle 1) du cube de même volume que ses pièces, pour régler sa taille en jeu
+    const volume = pose(model, null, 0, warn).reduce((sum, p, i) => sum + (kinds[i] === 'objet' ? 0 : p.size[0] * p.size[1] * p.size[2]), 0);
+    return { text: lines.join('\n') + '\n', skins, parts: model.cubes.length, names: model.cubes.map((c) => c.name), states, warnings, body: Math.cbrt(volume) / 16 };
 }
 
 // Exposé pour les contrôles (comparaison avec ce que Blockbench affiche)
