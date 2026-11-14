@@ -42,7 +42,7 @@ const bySha = Object.fromEntries(Object.entries(textures).map(([sha, hash]) => [
 
 let names = args.filter((a) => !a.startsWith('--'));
 if (names.includes('tout')) names = readdirSync(SRC).filter((f) => f.endsWith('.bbmodel')).map((f) => f.replace('.bbmodel', '')).sort();
-const files = [], info = {}, scales = {};
+const files = [], info = {}, scales = {}, skinsOf = {};
 let missing = 0;
 for (const arg of names) {
     const file = arg.endsWith('.bbmodel') ? arg : join(SRC, arg + '.bbmodel');
@@ -56,6 +56,7 @@ for (const arg of names) {
     const made = convert(JSON.parse(readFileSync(file, 'utf8')), textures, { name, tolerance: option('tolerance', 0.15) });
     writeFileSync(join(OUT, name + '.txt'), made.text);
     for (const [sha, png] of Object.entries(made.skins)) writeFileSync(join(OUT, 'peaux', sha + '.png'), png);
+    skinsOf[name] = Object.keys(made.skins);
     const todo = Object.keys(made.skins).filter((sha) => !textures[sha]).length;
     missing += todo;
     const scale = text('echelle') !== null ? option('echelle') : def && def.scale ? def.scale : Math.round(CORPS / made.body * 100) / 100;
@@ -71,6 +72,9 @@ for (const arg of names) {
 }
 if (missing) console.log(missing + ' peau(x) à téléverser : node televerse.mjs, puis relancer');
 if (args.includes('--livrer')) writeFileSync(join(OUT, 'echelles.json'), JSON.stringify(scales, null, 1));
+// Têtes de chaque modèle : televerse.mjs s'en sert pour finir les modèles un par un
+const skinsFile = join(OUT, 'peaux-modeles.json');
+writeFileSync(skinsFile, JSON.stringify({ ...(existsSync(skinsFile) ? JSON.parse(readFileSync(skinsFile, 'utf8')) : {}), ...skinsOf }, null, 1));
 if (args.includes('--sans-rendu') || !files.length) process.exit(0);
 
 const tag = (sheet || basename(files[0], '.txt')) + '-' + process.pid;

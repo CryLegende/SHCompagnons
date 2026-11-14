@@ -12,7 +12,16 @@ const textures = existsSync(FILE) ? JSON.parse(readFileSync(FILE, 'utf8')) : {};
 const key = process.env.MINESKIN_KEY || '';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const todo = readdirSync(DIR).filter((f) => f.endsWith('.png')).map((f) => f.replace('.png', '')).filter((sha) => !textures[sha]);
+let todo = readdirSync(DIR).filter((f) => f.endsWith('.png')).map((f) => f.replace('.png', '')).filter((sha) => !textures[sha]);
+// Quand blockbench.mjs a noté les têtes de chaque modèle, les modèles se terminent un par un, ceux à qui il manque
+// le moins de têtes d'abord : avec un quota horaire, des compagnons entiers sont prêts plus tôt
+const byModel = join(HERE, 'sortie', 'peaux-modeles.json');
+if (existsSync(byModel)) {
+    const models = Object.entries(JSON.parse(readFileSync(byModel, 'utf8'))).map(([name, shas]) => [name, shas.filter((sha) => todo.includes(sha))]).filter(([, shas]) => shas.length).sort((a, b) => a[1].length - b[1].length);
+    const ordered = [...new Set(models.flatMap(([, shas]) => shas))];
+    todo = [...ordered, ...todo.filter((sha) => !ordered.includes(sha))];
+    console.log('ordre : ' + models.map(([name, shas]) => name + ' (' + shas.length + ')').join(', '));
+}
 console.log(todo.length + ' peau(x) à téléverser');
 let done = 0;
 for (const sha of todo) {
