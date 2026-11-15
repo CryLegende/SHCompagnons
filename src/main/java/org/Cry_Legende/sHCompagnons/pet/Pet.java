@@ -21,6 +21,8 @@ import org.Cry_Legende.sHCompagnons.model.Track;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.joml.Quaternionf;
@@ -86,6 +88,13 @@ public final class Pet {
     private static final float PRELOAD_SCALE = 1.0e-4f;
     private boolean hidden;
     private boolean removed;
+    // Taille du propriétaire (attribut scale : potion, élixir géant ou minuscule...) : le modèle la suit, décalage et
+    // échelle ensemble, comme le nametag d'UnlimitedNametags. Relue tous les SCALE_CHECK_TICKS ; un changement
+    // renvoie la transformation de chaque pièce, lissée sur RESCALE_TICKS ticks
+    private static final int SCALE_CHECK_TICKS = 5;
+    private static final int RESCALE_TICKS = 4;
+    private static final float SCALE_EPSILON = 0.005f;
+    private float ownerScale = 1.0f;
     // Le propriétaire est invisible (potion, WorldGuard, setInvisible...) : le modèle ne reste que chez lui, si la config le veut
     private boolean invisible;
     // Numéro d'entité du propriétaire sous lequel le compagnon est rangé (il change à la réapparition)
@@ -219,6 +228,7 @@ public final class Pet {
         this.turnInterval = Math.max(settings.turnInterval(), (count + budget - 1) / budget);
         this.turnSmoothing = turnInterval > settings.turnInterval() ? Math.max(settings.turnSmoothing(), turnInterval + 1) : settings.turnSmoothing();
         this.ownerEntityId = owner.getEntityId();
+        this.ownerScale = readOwnerScale();
         Quaternionfc front = settings.placement().rotation();
         this.frontYaw = (float) Math.toDegrees(2 * Math.atan2(front.y(), front.w()));
         this.sentYaw = owner.getYaw();
@@ -310,12 +320,12 @@ public final class Pet {
         double yaw = Math.toRadians(sentYaw);
         double cos = Math.cos(yaw);
         double sin = Math.sin(yaw);
-        double x = root.getX() + offset.x() * cos - offset.z() * sin - eye.getX();
-        double y = root.getY() + offset.y() + frameAt(clock).offset().y() - eye.getY();
-        double z = root.getZ() + offset.x() * sin + offset.z() * cos - eye.getZ();
+        double x = root.getX() + (offset.x() * cos - offset.z() * sin) * ownerScale - eye.getX();
+        double y = root.getY() + (offset.y() + frameAt(clock).offset().y()) * ownerScale - eye.getY();
+        double z = root.getZ() + (offset.x() * sin + offset.z() * cos) * ownerScale - eye.getZ();
         org.bukkit.util.Vector look = eye.getDirection();
         double along = x * look.getX() + y * look.getY() + z * look.getZ();
-        double radius = type.radius() + settings.click().aimMargin();
+        double radius = type.radius() * ownerScale + settings.click().aimMargin();
         if (along < 0 || along > CLICK_REACH || x * x + y * y + z * z - along * along > radius * radius) {
             return null;
         }
@@ -402,6 +412,7 @@ public final class Pet {
         }
         hidden = false;
         invisible = owner.isInvisible();
+        ownerScale = readOwnerScale();
         queueEveryone();
     }
 
@@ -463,6 +474,9 @@ public final class Pet {
         if (invisibleNow != invisible) {
             invisible = invisibleNow;
             applyInvisibility();
+        }
+        if (settings.followOwnerScale() && now % SCALE_CHECK_TICKS == 0) {
+            syncScale();
         }
         trackActivity(now);
         if (settings.faceOwnerWhenWatched()) {
@@ -829,12 +843,50 @@ public final class Pet {
      */
     private Affine placed(Affine pose, Animation.Frame frame) {
         PetType.Placement placement = type.placement();
-        Vector3f offset = new Vector3f(placement.offset()).add(frame.offset());
+        Vector3f offset = new Vector3f(placement.offset()).add(frame.offset()).mul(ownerScale);
         Quaternionf rotation = new Quaternionf(placement.rotation());
         if (frame.spin() != 0) {
             rotation.rotateY((float) Math.toRadians(frame.spin()));
         }
-        return pose.placed(offset, rotation, placement.scale());
+        return pose.placed(offset, rotation, placement.scale() * ownerScale);
+    }
+
+    /** Taille actuelle du propriétaire (1 si le suivi est coupé, ou en cas de lecture impossible : valeur gardée). */
+    private float readOwnerScale() {
+        if (!settings.followOwnerScale()) {
+            return 1.0f;
+        }
+        try {
+            AttributeInstance instance = owner.getAttribute(Attribute.SCALE);
+            double value = instance == null ? 1.0 : instance.getValue();
+            return Double.isFinite(value) && value > 0 ? (float) value : ownerScale;
+        } catch (RuntimeException e) {
+            return ownerScale;
+        }
+    }
+
+    /** La taille du propriétaire a-t-elle changé ? Alors chaque pièce est renvoyée à la nouvelle échelle. */
+    private void syncScale() {
+        float wanted = readOwnerScale();
+        if (Math.abs(wanted - ownerScale) < SCALE_EPSILON) {
+            return;
+        }
+        ownerScale = wanted;
+        if (shown.isEmpty()) {
+            return;
+        }
+        // Chaque pièce vise sa pose du moment à la nouvelle échelle : les images clés suivantes partent de là
+        List<List<EntityData<?>>> updates = new ArrayList<>(ids.length);
+        for (int i = 0; i < ids.length; i++) {
+            Affine affine = placed(poses[i], frame);
+            List<EntityData<?>> data = new ArrayList<>(4);
+            data.add(new EntityData<>(Part.INTERPOLATION_DELAY, EntityDataTypes.INT, 0));
+            data.add(new EntityData<>(Part.TRANSFORMATION_DURATION, EntityDataTypes.INT, RESCALE_TICKS));
+            data.add(new EntityData<>(Part.TRANSLATION, EntityDataTypes.VECTOR3F, vector(affine.translation())));
+            data.add(new EntityData<>(Part.SCALE, EntityDataTypes.VECTOR3F, vector(affine.scale())));
+            updates.add(data);
+        }
+        sendUpdates(ids, updates);
     }
 
     /**

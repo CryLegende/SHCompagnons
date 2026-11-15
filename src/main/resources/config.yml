@@ -204,6 +204,11 @@ companion_settings:
   # Le propriétaire voit son propre compagnon
   show_to_owner: true
 
+  # Le compagnon suit la taille de son propriétaire (attribut scale : potion, élixir géant ou minuscule...) : décalage
+  # et taille du modèle sont multipliés par elle, comme le nametag d'UnlimitedNametags. Relue 4 fois par seconde. false :
+  # le compagnon garde sa taille de départ.
+  follow_owner_scale: true
+
   # Propriétaire invisible (potion, effet WorldGuard, autre plugin) : son compagnon l'est aussi pour tous les autres et
   # revient avec lui. true : le propriétaire garde son compagnon (comme son propre corps translucide) ; false : il ne
   # le voit plus non plus. Sans effet si show_to_owner est false.

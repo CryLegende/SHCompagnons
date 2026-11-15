@@ -25,6 +25,8 @@ Le serveur n'envoie ensuite que l'orientation quand le joueur tourne la tête (l
 
 Un modèle peut animer ses propres pièces (ailes qui battent, oreilles, bras qui salue, yeux qui clignent) en plus du mouvement d'ensemble du compagnon : voir [Animer les pièces d'un modèle](#animer-les-pièces-dun-modèle). Le jar fournit 39 modèles animés : 26 faits pour SkyHand, 13 repris de block-display.com. Les joueurs qui voient un compagnon sont exactement ceux qui voient son propriétaire (événements de suivi de Paper), plus le propriétaire lui-même : aucun parcours des joueurs à chaque tick.
 
+Le compagnon suit la **taille** de son propriétaire (attribut `scale` : potion, élixir géant ou minuscule) : décalage et taille du modèle sont multipliés par elle, relue 4 fois par seconde, et un changement est lissé sur 4 ticks (`companion_settings.follow_owner_scale`).
+
 Un propriétaire **invisible** (potion, effet `give-effects` de WorldGuard, autre plugin) n'est plus vu de personne, et son compagnon non plus : il disparaît de chez les autres joueurs et revient avec le propriétaire. Le propriétaire garde le sien, comme son propre corps translucide (`companion_settings.show_to_owner_when_invisible`). L'invisibilité est lue à chaque tick, un test de drapeau par compagnon. Un propriétaire en vanish que les autres ne peuvent plus suivre n'a déjà plus de compagnon chez eux.
 
 **Accroupi**, le propriétaire fige l'orientation de son compagnon : il peut se retourner pour le regarder. Au relevé, le compagnon reprend son regard en `turn.resume_smoothing_ticks` ticks (`turn.freeze_when_sneaking: false` pour qu'il suive toujours le regard).
