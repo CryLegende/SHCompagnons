@@ -10,6 +10,7 @@
 // reprise à l'identique, les autres largeurs sont rééchantillonnées au plus proche.
 // Un cube nommé « bloc:<bloc>/<nom> » est rendu par ce bloc du jeu (verre teinté d'un slime...), un cube nommé
 // « objet:<objet>/<nom> » par cet objet tenu à plat (une pioche) : sa texture Blockbench ne sert alors qu'à l'aperçu.
+// Un nom qui finit par « #lumineux » donne une pièce affichée en pleine lumière, de jour comme de nuit.
 import { createHash } from 'node:crypto';
 import { decodePng, encodePng } from './png.mjs';
 
@@ -77,7 +78,9 @@ function tree(bb, warn) {
             // Un cube nommé « hitbox » est la boîte de collision des modèles ModelEngine, pas une pièce à afficher
             if (e.visibility === false || e.export === false || /^hitbox$/i.test(e.name || '')) return;
             const special = /^(bloc|objet):([a-z0-9_]+)([/]|$)/.exec(e.name || '');
-            cubes.push({ name: e.name, kind: special ? special[1] : 'tete', what: special ? special[2] : null, parent, from: e.from, to: e.to, origin: e.origin || [0, 0, 0], rotation: e.rotation || [0, 0, 0], inflate: e.inflate || 0, faces: e.faces || {} });
+            // « #lumineux » à la fin du nom : pièce affichée en pleine lumière (luminosité 15 imposée), même la nuit
+            const lumineux = /#lumineux$/.test(e.name || '');
+            cubes.push({ name: e.name, kind: special ? special[1] : 'tete', what: special ? special[2] : null, lumineux, parent, from: e.from, to: e.to, origin: e.origin || [0, 0, 0], rotation: e.rotation || [0, 0, 0], inflate: e.inflate || 0, faces: e.faces || {} });
             return;
         }
         const g = { ...node, ...(groupData[node.uuid] || {}) };
@@ -323,7 +326,8 @@ export function convert(bb, textures = {}, options = {}) {
     const kinds = model.cubes.map((c) => c.kind);
     const base = pose(model, null, 0, warn).map((p, i) => entity(p, kinds[i]));
     const head = (e, i) => {
-        const transformation = 'transformation:{left_rotation:[' + e.l.map((v) => f(v, 5)).join(',') + '],right_rotation:[0f,0f,0f,1f],translation:[' + e.t.map((v) => f(v)).join(',') + '],scale:[' + e.s.map((v) => f(v)).join(',') + ']}';
+        const transformation = 'transformation:{left_rotation:[' + e.l.map((v) => f(v, 5)).join(',') + '],right_rotation:[0f,0f,0f,1f],translation:[' + e.t.map((v) => f(v)).join(',') + '],scale:[' + e.s.map((v) => f(v)).join(',') + ']}'
+            + (model.cubes[i].lumineux ? ',brightness:{sky:15,block:15}' : '');
         if (kinds[i] === 'bloc') return '{id:"minecraft:block_display",block_state:{Name:"minecraft:' + model.cubes[i].what + '"},' + transformation + '}';
         if (kinds[i] === 'objet') return '{id:"minecraft:item_display",item:{id:"minecraft:' + model.cubes[i].what + '",count:1},item_display:"none",' + transformation + '}';
         return '{id:"minecraft:item_display",item:{id:"minecraft:player_head",count:1,components:{"minecraft:profile":{properties:[{name:"textures",value:"' + values[i] + '"}]}}},item_display:"none",' + transformation + '}';

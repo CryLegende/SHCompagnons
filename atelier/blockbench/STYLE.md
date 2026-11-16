@@ -48,6 +48,7 @@ Beaucoup de leurs modèles tiennent en 5 à 12 cubes (29 sur 48) : la personnali
 
 ### Couleurs et textures
 - Couleurs claires et franches : en jeu les côtés d'une tête sont rendus à mi-luminosité.
+- Une pièce peut être lumineuse (`lumineux: true`) : affichée en pleine lumière, de jour comme de nuit. À garder pour une pièce dont la lumière est l'idée (le nez du Renne), jamais pour « faire briller » un compagnon.
 - On ne donne que la couleur de base : `bbkit.mjs` éclaircit la ligne du haut et le dessus, assombrit la ligne du bas et le dessous, ajoute un grain léger. Une couleur donnée en objet (`{ c: '#...' }`) reste nette (yeux, traits).
 - Une face se dessine en 1, 2, 4 ou 8 lignes de 1, 2, 4 ou 8 caractères. Gros pixels, pas de damier fin.
 - Deux pièces unies de la même couleur partagent la même tête : moins de textures à envoyer et à télécharger.
@@ -109,6 +110,7 @@ Une ligne par compagnon : son idée, ce qui se voit, ce qu'il fait au clic. À t
 | Axolotl | fait le mort, comme le vrai | branchies au vent, crête, sourire | se retourne sur le dos, pattes en l'air, puis se remet d'aplomb |
 | Grimoire | livre enchanté qui flotte | plume plantée de travers, ruban rouge, fermoir doré, pierre sertie | s'ouvre en grand, ses runes jaillissent, se referme d'un coup |
 | Pain d'épices (Noël) | il lui manque déjà un coin de tête | glaçage, boutons en bonbon, nœud papillon, sucre d'orge | danse d'un pied sur l'autre |
+| Renne (Noël 2026) | petit renne au nez rouge qui brille dans la nuit, il s'entraîne à voler pour tirer le traîneau | assis, tête penchée du côté de l'oreille qui tombe, bois en fourche, museau crème, plastron et croupe clairs ; le nez est une pièce lumineuse (il se voit la nuit) | prend son élan et s'envole en pédalant dans le vide, le nez qui grossit à chaque foulée, retombe sur les fesses et s'ébroue |
 | Lapin en chocolat (Pâques) | a très peur d'être mangé | papier doré à moitié défait, oreille croquée, ruban et grelot | tremble, l'oreille se couche, le grelot tinte |
 | Fantôme (Halloween) | à la chasse aux bonbons | drap rapiécé qui traîne, seau citrouille, sucette plantée de travers | fait « bouh », bras en l'air, la sucette saute |
 | Flamant rose (été) | ne sait pas nager : il garde sa bouée | bouée rouge et blanche, longues pattes qui pédalent, bec crochu | fait tourner sa bouée comme un cerceau |
@@ -122,7 +124,9 @@ Une ligne par compagnon : son idée, ce qui se voit, ce qu'il fait au clic. À t
 
 ### Compagnons d'évènement
 
-Quatre évènements : Noël, Pâques, Halloween, été. Le fichier du modèle porte l'évènement (`noel_`, `paques_`, `halloween_`, `ete_`). Le menu leur réserve cinq places chacun dans « Compagnons spéciaux » ; on part de deux par évènement (trois pour Noël : cadeau, bonhomme de neige, pain d'épices) pour pouvoir en ajouter un par an. L'ananas de l'été 2026 a été retiré (Cry : pas au niveau), le flamant rose le remplace.
+Quatre évènements : Noël, Pâques, Halloween, été. Le fichier du modèle porte l'évènement (`noel_`, `paques_`, `halloween_`, `ete_`). Le menu leur réserve cinq places chacun dans « Compagnons spéciaux » ; on part de deux par évènement (trois pour Noël : cadeau, bonhomme de neige, pain d'épices) pour pouvoir en ajouter un par an. L'ananas de l'été 2026 a été retiré (Cry : pas au niveau), le flamant rose le remplace. Noël 2026 ajoute le Renne (quatrième place de Noël), offert pour la carte de Noël complète ; il n'est dans aucune box. Le nom « Grelot » et l'idée du grelot qui tinte appartiennent au faon des références : notre renne n'a ni grelot ni écharpe.
+
+Le cube « tete » du Renne n'a ni le nez ni les bois (pièces à part) : son icône de menu est une tête dessinée exprès, `_icone_renne.mjs` (un fichier en « _ » n'est pas un compagnon livré).
 
 ### Gardés tels qu'ils étaient
 

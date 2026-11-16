@@ -90,6 +90,7 @@ Règles de dessin :
 
 - Une face de tête montre 8 x 8 pixels. Une face de cube large ou haute de 1, 2, 4 ou 8 pixels de texture est reprise à l'identique ; les autres largeurs sont rééchantillonnées (3 passe, 5 à 7 donnent des pixels inégaux).
 - Pas de transparence ni de pixels lumineux sur une tête : un pixel transparent prend la couleur moyenne du cube.
+- Une pièce entière peut être lumineuse : `lumineux: true` dans la description (nom du cube terminé par « #lumineux » dans Blockbench). Le fichier de modèle lui donne `brightness:{sky:15,block:15}` : elle est affichée en pleine lumière, même la nuit (nez du Renne).
 - Un cube = une entité : 12 au plus, comme pour les autres modèles.
 - Chaque image clé d'une pièce coûte un paquet. Le client va en ligne droite d'une image clé à la suivante : une animation dont toutes les pièces basculent entre deux poses aux mêmes instants (la marche du capybara) coûte deux paquets par pièce et par cycle ; une courbe lissée en coûte davantage. Une pièce qui ne bouge pas dans un état ne coûte rien : garder immobile ce qui peut l'être (la tête porte aussi le museau, les oreilles et ce qui est posé dessus).
 - `--tolerance` (0,15 pixel par défaut) règle l'écart accepté entre le trajet voulu et celui que le client affichera : plus grand, moins d'images clés.

@@ -8,7 +8,7 @@
 // Description :
 //   { name, title, palette: { car: '#rrggbb' | '#rrggbbaa' | { c: '#rrggbb' } }, noise, grad, bord,
 //     bones: { id: { parent, pivot: [x,y,z], rot: [x,y,z] } },
-//     cubes: [ { name, bone, from: [x,y,z], to: [x,y,z], pivot, rot, bord, seed, block, item,
+//     cubes: [ { name, bone, from: [x,y,z], to: [x,y,z], pivot, rot, bord, seed, block, item, lumineux,
 //                faces: { all, north, south, east, west, up, down } } ],
 //     animations: { idle: { length (secondes), loop: true|false, bones: { id: { rotation: [[t, [x,y,z], 'smooth'?]...], position, scale } } } } }
 // Une face est un caractère de la palette (aplat) ou des lignes de caractères : 1, 2, 4 ou 8 lignes de 1, 2, 4 ou 8
@@ -22,6 +22,8 @@
 // retire les lignes claire et sombre ; « bord: 'haut' » ne garde que la claire, « bord: 'bas' » que la sombre.
 // Un cube « block: 'lime_stained_glass' » est rendu en jeu par ce bloc (coque translucide d'un slime), un cube
 // « item: 'diamond_pickaxe' » par l'objet tenu à plat ; leurs faces ne servent qu'à l'aperçu dans Blockbench.
+// « lumineux: true » : la pièce est affichée en pleine lumière, de jour comme de nuit (nez du renne) ; son nom
+// porte alors « #lumineux » dans Blockbench.
 // Une face peut aussi être donnée pixel par pixel ({ px: [64 couleurs] }) : tête officielle d'un personnage du jeu.
 import { createHash } from 'node:crypto';
 import { encodePng } from './png.mjs';
@@ -107,7 +109,7 @@ export function project(def) {
         if (b.parent && !def.bones[b.parent]) throw new Error('os ' + id + ' : parent inconnu ' + b.parent);
         return { name: id, uuid: uuid(def.name + '/os/' + id), export: true, locked: false, scope: 0, selected: false, visibility: true, origin: b.pivot || [0, 0, 0], rotation: b.rot || [0, 0, 0], color: 0, children: [], reset: false, shade: true, mirror_uv: false, autouv: 0, isOpen: true, primary_selected: false };
     });
-    const shown = (cube) => (cube.block ? 'bloc:' + cube.block + '/' : cube.item ? 'objet:' + cube.item + '/' : '') + cube.name;
+    const shown = (cube) => (cube.block ? 'bloc:' + cube.block + '/' : cube.item ? 'objet:' + cube.item + '/' : '') + cube.name + (cube.lumineux ? '#lumineux' : '');
     const elements = def.cubes.map((cube, n) => {
         if (cube.bone && !def.bones[cube.bone]) throw new Error('cube ' + cube.name + ' : os inconnu ' + cube.bone);
         const faces = Object.fromEntries(FACES.map((f) => { const t = faceTiles[n][f], u = (t % 16) * 8, v = Math.floor(t / 16) * 8; return [f, { uv: [u, v, u + 8, v + 8], texture: 0 }]; }));
