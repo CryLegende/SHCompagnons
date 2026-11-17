@@ -36,7 +36,7 @@ export default {
     bones: {
         ...squelette([0, 2.8, 1.7], [0, 6.5, -1.8], [0, 2.6, 1.7]),
         lanterne: { parent: 'tete', pivot: M },
-        queue: { parent: 'corps', pivot: [0, 5.4, 5.0], rot: [-26, 0, 0] },
+        queue: { parent: 'corps', pivot: [0, 5.7, 5.0], rot: [-26, 0, 0] },
         ...O.bones, ...P.bones,
     },
     cubes: [
@@ -56,7 +56,7 @@ export default {
         // L'anse de fer, tenue dans la gueule, et la lanterne qui pend dessous
         { name: 'anse', bone: 'lanterne', bord: false, from: [-0.3, 3.8, -9.3], to: [0.3, 6.0, -8.7], faces: { all: 'i' } },
         { name: 'lanterne', bone: 'lanterne', lumineux: true, from: [-1.4, 0.6, -10.4], to: [1.4, 3.8, -7.6], faces: { all: vitre, up: ['iiii', 'iIIi', 'iIIi', 'iiii'], down: 'I' } },
-        { name: 'queue', bone: 'queue', from: [-2.2, 3.6, 5.0], to: [2.2, 7.8, 12.6], faces: { all: 'f', east: bout, west: flip(bout), up: ['ffffffff', 'ffffffff', 'ffffffff', 'ffffffff', 'ffffffff', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww'], down: ['wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'ffffffff', 'ffffffff', 'ffffffff', 'ffffffff', 'ffffffff'], south: 'w' } },
+        { name: 'queue', bone: 'queue', from: [-1.5, 4.2, 5.0], to: [1.5, 7.2, 12.4], faces: { all: 'f', east: bout, west: flip(bout), up: ['ffffffff', 'ffffffff', 'ffffffff', 'ffffffff', 'ffffffff', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww'], down: ['wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'ffffffff', 'ffffffff', 'ffffffff', 'ffffffff', 'ffffffff'], south: 'w' } },
         ...P.cubes,
     ],
     animations: {
