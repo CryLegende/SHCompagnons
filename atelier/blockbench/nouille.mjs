@@ -1,4 +1,4 @@
-// Nouille, le dragon nouille : long corps turquoise qui ondule dans l'air, ventre crème, bois crème, moustaches
+// Nouille, le dragon nouille : long corps violet qui ondule dans l'air, ventre crème, bois crème, moustaches
 // dorées, crête et nageoires rouge orangé. Au clic il fait un looping complet, le corps enroulé dans la boucle.
 import { mirrored, mirroredBone, mirroredKeys } from '../bbkit.mjs';
 import { COMMUN, IDLE, WALK, mix, tient, tic } from './_style.mjs';
@@ -41,8 +41,9 @@ export default {
     title: 'Nouille',
     palette: {
         ...COMMUN, b: '#e9837f',
-        t: '#55d0b4', T: '#3aa88f', w: '#eee0b6', r: '#ea6e55', R: '#c9533f',
-        a: '#efe7c4', A: '#d9cfa4', o: '#e4b240', O: '#c4922e', n: '#2f8f78',
+        // Violet depuis le 17 novembre 2026 (Cry : « trouve autre chose que le vert, peut-être un violet »)
+        t: '#9d6fe0', T: '#774bbd', w: '#eee0b6', r: '#f27aa8', R: '#cc5687',
+        a: '#efe7c4', A: '#d9cfa4', o: '#e4b240', O: '#c4922e', n: '#55308f',
     },
     bones: {
         root: { pivot: [0, 6, 1] },
