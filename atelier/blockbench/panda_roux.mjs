@@ -2,10 +2,11 @@
 // 17 novembre 2026 : il remplace le Panda roux, même clé de compagnon pour que ceux qui l'avaient le gardent).
 // Il tient dans sa gueule, par son anse, une lanterne allumée pour éclairer le chemin de son maître (pièce lumineuse :
 // elle se voit la nuit). Renard roux au masque crème, chaussettes brun foncé, grandes oreilles, queue touffue
-// recourbée vers le haut au bout crème.
-// Au repos la lanterne se balance au bout de son anse et la flamme vacille. Au clic il se dresse sur ses pattes
-// arrière, lève la lanterne qui s'illumine et balaie l'horizon du regard, à gauche puis à droite, puis se repose en
-// remuant la queue.
+// relevée au bout crème. L'anse de fer se voit entre la gueule et la lanterne.
+// Au repos la lanterne se balance au bout de son anse. Au clic il se dresse sur ses pattes arrière et balaie
+// l'horizon du regard, à gauche puis à droite : la lanterne suit avec un temps de retard, comme un vrai poids au bout
+// d'une anse ; il retombe sur ses pattes, la lanterne part en avant et tourne une fois sur son anse, puis il remue la
+// queue (17 novembre 2026, Cry : pas de lanterne qui gonfle).
 import { COMMUN, IDLE, WALK, mix, balance, tient, respire, regarde, tic, pendouille, pedale, flanc, paire, pattes4, squelette } from './_style.mjs';
 
 const z3 = (v) => [v, v, v];
@@ -18,8 +19,8 @@ const O = paire('oreille', { parent: 'tete', pivot: [2.3, 11.2, -4.9] }, {
 });
 // Joue droite vue de l'extérieur (gauche du dessin = arrière) : touffe crème vers l'avant, en bas
 const joue = ['ffffffff', 'ffffffff', 'ffffffff', 'ffffffff', 'ffffffff', 'fffffwww', 'ffffwwww', 'fffwwwww'];
-// Bout de queue vu de côté (gauche du dessin = arrière) : moitié arrière crème
-const bout = Array(8).fill('wwwwffff');
+// Queue vue de côté (gauche du dessin = arrière) : bout crème
+const bout = Array(8).fill('wwwfffff');
 // Lanterne : cadre de fer sombre, vitres qui brillent, cœur plus clair
 const vitre = ['IiiiiiiI', 'iyyyyyyi', 'iyYYYYyi', 'iyYYYYyi', 'iyYYYYyi', 'iyyyyyyi', 'iiiiiiii', 'iIIIIIIi'];
 const M = [0, 5.7, -9.0]; // la gueule : la lanterne pend de là
@@ -35,8 +36,7 @@ export default {
     bones: {
         ...squelette([0, 2.8, 1.7], [0, 6.5, -1.8], [0, 2.6, 1.7]),
         lanterne: { parent: 'tete', pivot: M },
-        queue: { parent: 'corps', pivot: [0, 5.4, 5.0], rot: [-10, 0, 0] },
-        queueBout: { parent: 'queue', pivot: [0, 5.8, 9.4], rot: [-30, 0, 0] },
+        queue: { parent: 'corps', pivot: [0, 5.4, 5.0], rot: [-26, 0, 0] },
         ...O.bones, ...P.bones,
     },
     cubes: [
@@ -53,10 +53,10 @@ export default {
             faces: { all: 'w', north: ['wwwnnwww', 'wwwnnwww', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww'], up: ['wwwnnwww', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww'] },
         },
         ...O.cubes,
-        // La lanterne tenue par son anse dans la gueule, juste sous le museau
-        { name: 'lanterne', bone: 'lanterne', lumineux: true, from: [-1.4, 2.4, -10.4], to: [1.4, 5.6, -7.6], faces: { all: vitre, up: ['iiii', 'iIIi', 'iIIi', 'iiii'], down: 'I' } },
-        { name: 'queue', bone: 'queue', from: [-2.1, 3.6, 5.0], to: [2.1, 7.6, 9.8], faces: { all: 'f', south: 'f' } },
-        { name: 'queueBout', bone: 'queueBout', from: [-2.3, 3.6, 9.0], to: [2.3, 8.0, 14.0], faces: { all: 'f', east: bout, west: flip(bout), up: ['ffffffff', 'ffffffff', 'ffffffff', 'ffffffff', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww'], down: ['wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'ffffffff', 'ffffffff', 'ffffffff', 'ffffffff'], south: 'w' } },
+        // L'anse de fer, tenue dans la gueule, et la lanterne qui pend dessous
+        { name: 'anse', bone: 'lanterne', bord: false, from: [-0.3, 3.8, -9.3], to: [0.3, 6.0, -8.7], faces: { all: 'i' } },
+        { name: 'lanterne', bone: 'lanterne', lumineux: true, from: [-1.4, 0.6, -10.4], to: [1.4, 3.8, -7.6], faces: { all: vitre, up: ['iiii', 'iIIi', 'iIIi', 'iiii'], down: 'I' } },
+        { name: 'queue', bone: 'queue', from: [-2.2, 3.6, 5.0], to: [2.2, 7.8, 12.6], faces: { all: 'f', east: bout, west: flip(bout), up: ['ffffffff', 'ffffffff', 'ffffffff', 'ffffffff', 'ffffffff', 'wwwwwwww', 'wwwwwwww', 'wwwwwwww'], down: ['wwwwwwww', 'wwwwwwww', 'wwwwwwww', 'ffffffff', 'ffffffff', 'ffffffff', 'ffffffff', 'ffffffff'], south: 'w' } },
         ...P.cubes,
     ],
     animations: {
@@ -64,19 +64,18 @@ export default {
             length: IDLE,
             bones: mix(
                 respire('ventre', IDLE, 2, 0.05), regarde('tete', IDLE, 8, 2), tic('oreilleD', [0, 0, -16], 2.2), tic('oreilleG', [0, 0, 16], 4.6), pendouille(undefined, 6),
-                // La queue ondule, son bout en retard ; la lanterne se balance au bout de son anse ; la flamme vacille
-                balance('queueBout', [0, 14, 4], IDLE, { tours: 2 }),
-                balance('lanterne', [7, 0, 5], IDLE, { tours: 3 }),
-                { lanterne: { scale: [[2.4, z3(1)], [2.5, z3(1.1)], [2.6, z3(1)], [2.7, z3(1.07)], [2.8, z3(1)]] } },
+                // La queue ondule ; la lanterne se balance au bout de son anse
+                balance('queue', [0, 12, 3], IDLE, { tours: 2 }),
+                balance('lanterne', [7, 0, 5], IDLE, { tours: 2 }),
             ),
         },
         walk: {
             length: WALK,
             // Petit trot, la lanterne ballotte, la queue flotte derrière
-            bones: mix(pedale(undefined, 28), tient('corps', [-4, 0, 0]), balance('lanterne', [16, 0, 0], WALK, { phase: 1 }), tient('queue', [8, 0, 0]), tient('queueBout', [10, 0, 0])),
+            bones: mix(pedale(undefined, 28), tient('corps', [-4, 0, 0]), balance('lanterne', [16, 0, 0], WALK, { phase: 1 }), tient('queue', [10, 0, 0])),
         },
         interact: {
-            length: 2.3,
+            length: 2.5,
             loop: false,
             bones: {
                 // Se dresse sur ses pattes arrière (le devant monte), redescend à 1,75 s
@@ -86,10 +85,13 @@ export default {
                 },
                 // La tête lève la lanterne bien haut et balaie l'horizon : gauche, droite, puis au centre
                 tete: { rotation: [[0, z3(0)], [0.3, [-12, 0, 0]], [0.55, [-12, 0, 0]], [0.8, [-12, 34, 4]], [1.05, [-12, 34, 4]], [1.35, [-12, -34, -4]], [1.55, [-12, -34, -4]], [1.75, [-12, 0, 0]], [2.0, z3(0)]] },
-                // La lanterne reste à peu près d'aplomb sous l'anse et s'illumine pendant le tour d'horizon
+                // La lanterne pend d'aplomb sous l'anse (-26 compense le renard dressé) et suit chaque mouvement en retard :
+                // elle part en arrière quand il se dresse, de côté quand il tourne la tête ; à la retombée elle file en
+                // avant puis fait un tour complet sur son anse (quatre quarts de tour) avant de se poser
                 lanterne: {
-                    rotation: [[0, z3(0)], [0.3, [-30, 0, 0]], [0.45, [-20, 0, 0]], [0.55, [-26, 0, 0]], [1.75, [-26, 0, 0]], [2.0, [10, 0, 0]], [2.15, [-5, 0, 0]], [2.3, z3(0)]],
-                    scale: [[0, z3(1)], [0.3, z3(1)], [0.55, z3(1.5)], [1.55, z3(1.5)], [1.85, z3(1)]],
+                    rotation: [[0, z3(0)], [0.3, [-44, 0, 0]], [0.45, [-16, 0, 0]], [0.6, [-26, 0, 0]],
+                        [0.8, [-26, 0, -16]], [0.95, [-26, 0, 7]], [1.05, [-26, 0, 0]], [1.35, [-26, 0, 16]], [1.5, [-26, 0, -7]], [1.6, [-26, 0, 0]],
+                        [1.75, [-26, 0, 0]], [2.0, [22, 0, 0]], [2.12, [-10, 90, 0]], [2.24, [6, 180, 0]], [2.36, [-3, 270, 0]], [2.48, [0, 360, 0]]],
                 },
                 // Pattes avant repliées contre le poitrail, qui pédalent un peu
                 patteAvD: { rotation: [[0, z3(0)], [0.3, [-55, 0, 0]], [0.8, [-45, 0, 0]], [1.3, [-55, 0, 0]], [1.75, [-45, 0, 0]], [2.0, z3(0)]] },
@@ -100,7 +102,7 @@ export default {
                 // Oreilles droites aux aguets, puis la queue remue de contentement
                 oreilleD: { rotation: [[0, z3(0)], [0.3, [-10, 0, 8]], [1.75, [-10, 0, 8]], [2.0, z3(0)]] },
                 oreilleG: { rotation: [[0, z3(0)], [0.3, [-10, 0, -8]], [1.75, [-10, 0, -8]], [2.0, z3(0)]] },
-                queue: { rotation: [[0, z3(0)], [0.3, [-30, 0, 0]], [1.75, [-30, 0, 0]], [1.9, [0, 18, 0]], [2.05, [0, -18, 0]], [2.2, [0, 10, 0]], [2.3, z3(0)]] },
+                queue: { rotation: [[0, z3(0)], [0.3, [-30, 0, 0]], [1.75, [-30, 0, 0]], [1.95, [0, 18, 0]], [2.1, [0, -18, 0]], [2.25, [0, 12, 0]], [2.4, [0, -6, 0]], [2.5, z3(0)]] },
             },
         },
     },
