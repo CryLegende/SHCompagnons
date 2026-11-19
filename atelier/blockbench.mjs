@@ -9,7 +9,8 @@
 //   --planche=<nom>   une seule image sortie/<nom>.png : deux vues par modèle, tous à la même échelle de jeu
 //   --cote            les états vus de côté
 //   --zoom            images des états deux fois plus grandes ; --etats=interact,walk : seulement ces états
-//   --echelle=0.4     échelle de jeu forcée (sinon celle de la description, sinon calculée : voir CORPS)
+//   --echelle=0.4     échelle de jeu forcée, finale (sinon celle de la description, sinon calculée : voir CORPS), les deux
+//                     multipliées par TAILLE (1,2) ou par le `taille:` de la description
 //   --tolerance=0.15  écart accepté (pixels du modèle) entre le mouvement voulu et celui que le client affichera
 //   --sans-rendu      conversion seule
 //   --livrer          copie les fichiers de modèle dans ../src/main/resources/models/ et écrit sortie/echelles.json
@@ -24,6 +25,10 @@ import { render } from './rendu.mjs';
 
 /** Taille visée en jeu : côté (blocs) du cube de même volume que les pièces du modèle. */
 export const CORPS = 0.2;
+/** Agrandissement visuel voulu par Cry (19 novembre 2026 : l'ancienne taille était un peu trop petite). Appliqué à la
+ *  taille calculée et à la taille écrite dans une description ; une description peut avoir son propre `taille:`
+ *  (Grimoire 1,4). --echelle reste une échelle de jeu finale, jamais multipliée. */
+export const TAILLE = 1.2;
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, 'sortie'), SRC = join(HERE, 'blockbench');
@@ -60,7 +65,9 @@ for (const arg of names) {
     skinsOf[name] = Object.keys(made.skins);
     const todo = Object.keys(made.skins).filter((sha) => !textures[sha]).length;
     missing += todo;
-    const scale = text('echelle') !== null ? option('echelle') : def && def.scale ? def.scale : Math.round(CORPS / made.body * 100) / 100;
+    const factor = def && def.taille ? def.taille : TAILLE;
+    const scale = text('echelle') !== null ? option('echelle')
+        : def && def.scale ? Math.round(def.scale * factor * 1000) / 1000 : Math.round(CORPS * factor / made.body * 100) / 100;
     const cost = (s) => s.perSecond.toFixed(1);
     console.log(name.padEnd(20) + String(made.parts).padStart(3) + ' pièces, ' + Object.keys(made.skins).length + ' peaux' + (todo ? ' (' + todo + ' à téléverser)' : '') + ', échelle ' + scale
         + ' — ' + made.states.map((s) => s.name + ' ' + cost(s) + '/s').join(', '));

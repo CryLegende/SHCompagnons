@@ -11,6 +11,7 @@ export default {
     name: 'grimoire',
     title: 'Grimoire',
     scale: 0.42,
+    taille: 1.4,
     palette: { ...COMMUN, v: '#2f9f8b', V: '#23806f', o: '#ffc83a', O: '#d99a1a', c: '#fff5dc', C: { c: '#e6d5ae' }, r: '#e2483f', R: '#b93530', w: '#ffffff', W: { c: '#d7dde6' }, s: '#5b4a3a', e: { c: '#8ff7ff' }, y: { c: '#ffe873' }, E: '#39c6e8' },
     bones: {
         root: { pivot: [0, 0, 0] }, corps: { parent: 'root', pivot: [0, 4.7, 0], rot: [0, 0, 5] }, couverture: { parent: 'corps', pivot: [2.9, 4.7, -1.1] },

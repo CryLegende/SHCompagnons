@@ -37,7 +37,7 @@ Beaucoup de leurs modèles tiennent en 5 à 12 cubes (29 sur 48) : la personnali
 ### Silhouette
 - Grosse tête ou gros corps, membres courts. Le modèle regarde vers le nord dans Blockbench (-z), posé à y = 0, centré sur x = 0.
 - Au moins une pièce en diagonale (`rot`) et, si l'idée s'y prête, une pose de repos un peu penchée.
-- Taille en jeu calculée par `blockbench.mjs` (« corps » de 0,20 bloc) : tous les compagnons paraissent de la même taille.
+- Taille en jeu calculée par `blockbench.mjs` (« corps » de 0,20 bloc, puis × `TAILLE` = 1,2 depuis le 19 novembre 2026, l'ancienne taille étant un peu trop petite) : tous les compagnons paraissent de la même taille. Une description qui fixe `scale:` est multipliée de même ; `taille:` la remplace pour ce compagnon (Grimoire 1,4).
 
 ### Visage
 - `visage('f')` : yeux de 1 x 2 aux colonnes 1 et 6, pour une tête à museau (le museau en relief occupe le milieu).
